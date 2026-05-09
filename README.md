@@ -1,6 +1,8 @@
 # opencode-launcher
 
-TUI launcher for [OpenCode](https://github.com/sst/opencode) — project switcher and plugin manager.
+TUI launcher and `oc` shell command for [OpenCode](https://github.com/sst/opencode).
+
+When loaded as an OpenCode plugin, it installs the `oc` command into your shell. Running `oc` opens an interactive TUI for switching between projects and managing plugins.
 
 ## Features
 
@@ -19,9 +21,9 @@ TUI launcher for [OpenCode](https://github.com/sst/opencode) — project switche
 
 ## Installation
 
-### As a managed plugin
+### Option A — Via plugin-updater (recommended)
 
-Add the following to your `~/.config/opencode/config/plugins.json` array:
+If you have [opencode-plugin-updater](https://github.com/intisy/opencode-plugin-updater) installed, add this entry to `~/.config/opencode/config/plugins.json`:
 
 ```json
 {
@@ -30,33 +32,51 @@ Add the following to your `~/.config/opencode/config/plugins.json` array:
   "install": null,
   "build": null,
   "bundle": null,
-  "output": "oc-tui.js",
-  "pluginFile": "oc-tui.js",
+  "output": "plugin.js",
+  "pluginFile": "oc-launcher.js",
   "autoUpdate": true
 }
 ```
 
-### Manual installation
+Restart OpenCode. The updater will clone the repo and deploy the plugin automatically.
 
-```bash
-git clone https://github.com/intisy/opencode-launcher.git ~/.config/opencode/repos/intisy/opencode-launcher
-```
+### Option B — npm
 
-### Shell alias
+Add the package to your `~/.config/opencode/opencode.json`:
 
-Add to your shell config (`.bashrc`, `.zshrc`, etc.):
-
-```bash
-oc() {
-  local tmp=$(mktemp)
-  OC_OUTPUT="$tmp" bun ~/.config/opencode/repos/intisy/opencode-launcher/oc-tui.js "$@"
-  local dir=$(cat "$tmp" 2>/dev/null)
-  rm -f "$tmp"
-  if [ -n "$dir" ]; then
-    cd "$dir" && opencode
-  fi
+```jsonc
+{
+  "plugins": ["opencode-launcher@latest"]
 }
 ```
+
+Restart OpenCode.
+
+### Option C — Manual
+
+```bash
+mkdir -p ~/.config/opencode/repos/intisy/opencode-launcher
+git clone https://github.com/intisy/opencode-launcher.git ~/.config/opencode/repos/intisy/opencode-launcher
+cp ~/.config/opencode/repos/intisy/opencode-launcher/plugin.js ~/.config/opencode/plugins/oc-launcher.js
+```
+
+Register the plugin in `~/.config/opencode/opencode.json`:
+
+```jsonc
+{
+  "plugins": {
+    "oc-launcher": "./plugins/oc-launcher.js"
+  }
+}
+```
+
+## How It Works
+
+1. **On OpenCode startup** — the plugin installs `oc` (or `oc.cmd` on Windows) into `~/.local/bin/`
+2. **When you run `oc`** — the TUI launcher opens, showing your projects and plugins
+3. **Select a project** — the launcher `cd`s into the directory and starts `opencode`
+
+The plugin also provides an `oc_remove` tool to uninstall the shell command.
 
 ## Usage
 
