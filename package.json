@@ -1,0 +1,20 @@
+{
+  "name": "opencode-launcher",
+  "version": "1.0.0",
+  "description": "TUI launcher for OpenCode - project switcher and plugin manager",
+  "main": "oc-tui.js",
+  "type": "module",
+  "license": "MIT",
+  "author": "intisy",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/intisy/opencode-launcher.git"
+  },
+  "homepage": "https://github.com/intisy/opencode-launcher#readme",
+  "keywords": [
+    "opencode",
+    "launcher",
+    "tui",
+    "project-switcher"
+  ]
+}
