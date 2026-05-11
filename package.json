@@ -8,9 +8,9 @@
     "author":  "intisy",
     "repository":  {
                        "type":  "git",
-                       "url":  "git+https://github.com/intisy/opencode-launcher.git"
+                       "url":  "git+https://github.com/intisy/opencode-hub.git"
                    },
-    "homepage":  "https://github.com/intisy/opencode-launcher#readme",
+    "homepage":  "https://github.com/intisy/opencode-hub#readme",
     "keywords":  [
                      "opencode",
                      "launcher",
