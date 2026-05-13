@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { Database } from "bun:sqlite";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync } from "fs";
 import { execSync } from "child_process";
 import { join, dirname } from "path";
 import { homedir } from "os";
@@ -19,6 +19,30 @@ var PLUGINS_DIR = join(CONFIG_DIR, "plugin");
 // ---------------------------------------------------------------------------
 // Folder name helper: <creator>/<repo-name> to avoid collisions
 // ---------------------------------------------------------------------------
+
+function loadNpmPlugins() {
+  var ocPath = join(CONFIG_DIR, "opencode.json");
+  if (!existsSync(ocPath)) return [];
+  try {
+    var raw = readFileSync(ocPath, "utf-8");
+    var stripped = raw.replace(/\/\/[^\n]*/g, "");
+    var oc = JSON.parse(stripped);
+    var plugins = oc.plugin || [];
+    return plugins
+      .filter(function(p) { return typeof p === "string"; })
+      .map(function(p) {
+        var name = p.replace(/@[^@\/]+$/, "") || p;
+        var version = "";
+        try {
+          var pkgPath = join(CONFIG_DIR, "node_modules", name, "package.json");
+          if (existsSync(pkgPath)) {
+            version = JSON.parse(readFileSync(pkgPath, "utf-8")).version || "";
+          }
+        } catch {}
+        return { name: name, version: version, raw: p };
+      });
+  } catch { return []; }
+}
 
 function getFolderName(plugin) {
   var match = (plugin.url || "").match(/github\.com\/([^\/]+)\/([^\/\.]+)/);
@@ -73,20 +97,6 @@ function checkForUpdates() {
     process.stderr.write("\x1b[33m  > Updating OpenCode: " + installed + " -> " + latest + "\x1b[0m\n");
     execSync("npm install -g opencode-ai@latest", { stdio: "inherit", timeout: 120000 });
     process.stderr.write("\x1b[32m  > Updated to " + latest + "\x1b[0m\n\n");
-  } catch (e) {}
-
-  // Auto-update NPM plugins
-  try {
-    var ocPath = join(CONFIG_DIR, "opencode.json");
-    if (existsSync(ocPath)) {
-      var oc = JSON.parse(readFileSync(ocPath, "utf-8"));
-      var pluginsArr = oc.plugin || oc.plugins || [];
-      var npmPlugs = pluginsArr.filter(function(p) { return typeof p === "string" && p.includes("@latest") && !p.startsWith("."); });
-      if (npmPlugs.length > 0) {
-        process.stderr.write("\x1b[33m  > Auto-updating NPM plugins: " + npmPlugs.join(", ") + "\x1b[0m\n");
-        execSync("npm install --no-save " + npmPlugs.join(" "), { cwd: CONFIG_DIR, stdio: "ignore", timeout: 60000 });
-      }
-    }
   } catch (e) {}
 }
 
@@ -224,10 +234,13 @@ function buildPluginList() {
     var remoteHead = "";
     var subject = "";
     var updateAvail = false;
+    var latestTag = "";
+    var enabled = p.enabled !== false;
 
     if (installed) {
       localHead = gitText(["git", "rev-parse", "HEAD"], dir);
       subject = gitText(["git", "log", "-1", "--format=%s"], dir);
+      latestTag = gitText(["git", "describe", "--tags", "--abbrev=0"], dir);
     }
 
     list.push({
@@ -235,10 +248,12 @@ function buildPluginList() {
       folderName: folderName,
       url: p.url,
       autoUpdate: p.autoUpdate !== false,
+      enabled: enabled,
       installed: installed,
       deployed: deployed,
       localHead: localHead,
       remoteHead: remoteHead,
+      latestTag: latestTag,
       subject: subject,
       updateAvail: updateAvail,
       hasBuild: !!(p.build || p.bundle),
@@ -292,6 +307,10 @@ function runPluginUpdate(pluginItem) {
   if (repo.install) {
     try { execSync(repo.install.join(" "), { cwd: dir, timeout: 120000, stdio: "ignore" }); }
     catch (e) { return "Install failed"; }
+  }
+  if (repo.postInstall) {
+    try { execSync(repo.postInstall.join(" "), { cwd: dir, timeout: 120000, stdio: "ignore" }); }
+    catch (e) { return "Post-install failed"; }
   }
   if (repo.build) {
     try { execSync(repo.build.join(" "), { cwd: dir, timeout: 120000, stdio: "ignore" }); }
@@ -348,6 +367,7 @@ function showCur() { process.stderr.write(E + "?25h"); }
 
 var items = buildList();
 var pluginItems = buildPluginList();
+var npmPluginItems = loadNpmPlugins();
 var cursor = 0;
 var pcursor = 0; // plugin page cursor
 var mode = "list"; // "list" | "actions" | "input" | "pactions"
@@ -394,16 +414,22 @@ function getActions(item) {
 
 function getPluginActions(pitem) {
   var a = [];
+  if (!pitem.enabled) {
+    a.push({ key: "enable-plugin", label: "Enable plugin" });
+    a.push({ key: "cancel", label: "Cancel" });
+    return a;
+  }
   if (pitem.updateAvail || !pitem.deployed) {
     a.push({ key: "update", label: "Update now" });
   }
   if (pitem.autoUpdate) {
-    a.push({ key: "disable-auto", label: "Disable auto-update" });
+    a.push({ key: "disable-auto", label: "Set to manual update" });
   } else {
     a.push({ key: "enable-auto", label: "Enable auto-update" });
   }
   a.push({ key: "force-update", label: "Force rebuild & deploy" });
   a.push({ key: "commits", label: "Select specific commit (Downgrade)" });
+  a.push({ key: "disable-plugin", label: "Disable plugin" });
   a.push({ key: "cancel", label: "Cancel" });
   return a;
 }
@@ -627,23 +653,29 @@ function buildPluginItem(pushBody, i, pitem, nameW, cols, isSelected) {
   var nameStyle = sel ? (BOLD + WHITE) : DIM;
 
   var statusParts = [];
-  if (pitem.autoUpdate) {
+  if (!pitem.enabled) {
+    statusParts.push(RED + "disabled" + RST);
+  } else if (pitem.autoUpdate) {
     statusParts.push(GREEN + "auto" + RST);
   } else {
     statusParts.push(YELLOW + "manual" + RST);
   }
-  if (pitem.updateAvail) {
-    statusParts.push(CYAN + "UPDATE" + RST);
-  } else if (pitem.deployed) {
-    statusParts.push(GRAY + "ok" + RST);
-  } else {
-    statusParts.push(RED + "missing" + RST);
+  if (pitem.enabled) {
+    if (pitem.updateAvail) {
+      statusParts.push(CYAN + "UPDATE" + RST);
+    } else if (pitem.deployed) {
+      statusParts.push(GRAY + "ok" + RST);
+    } else {
+      statusParts.push(RED + "missing" + RST);
+    }
   }
 
   var statusStr = statusParts.join(GRAY + " | " + RST);
-  var commitStr = pitem.localHead ? (GRAY + pitem.localHead.substring(0, 7) + RST) : (GRAY + "---" + RST);
+  var versionStr = pitem.latestTag
+    ? (GRAY + pitem.latestTag + RST)
+    : (pitem.localHead ? (GRAY + pitem.localHead.substring(0, 7) + RST) : (GRAY + "---" + RST));
 
-  pushBody("  " + bg + arrow + nameStyle + pad(trunc(pitem.name, nameW), nameW) + RST + bg + " " + statusStr + "  " + commitStr + RST, isSelected);
+  pushBody("  " + bg + arrow + nameStyle + pad(trunc(pitem.name, nameW), nameW) + RST + bg + " " + statusStr + "  " + versionStr + RST, isSelected);
 
   if (sel) {
     var subInfo = GRAY + "     " + trunc(pitem.subject || pitem.url, cols - 10) + RST;
@@ -701,15 +733,18 @@ function buildPlugins(pushBody, pushFoot, cols, barW) {
     return;
   }
 
-  var autoCount = 0, manualCount = 0, updateCount = 0;
+  var autoCount = 0, manualCount = 0, updateCount = 0, disabledCount = 0;
   for (var p of pluginItems) {
-    if (p.autoUpdate) autoCount++; else manualCount++;
+    if (!p.enabled) disabledCount++;
+    else if (p.autoUpdate) autoCount++; else manualCount++;
     if (p.updateAvail) updateCount++;
   }
 
   pushBody("  " + MAGENTA + "#" + GRAY + " Plugins " +
     DIM + "(" + autoCount + " auto, " + manualCount + " manual" +
+    (disabledCount > 0 ? ", " + RED + disabledCount + " disabled" + DIM : "") +
     (updateCount > 0 ? ", " + CYAN + updateCount + " updates" + DIM : "") +
+    (npmPluginItems.length > 0 ? ", " + GRAY + npmPluginItems.length + " npm" + DIM : "") +
     ")" + RST, false);
 
   if (!pluginFetched) {
@@ -718,6 +753,16 @@ function buildPlugins(pushBody, pushFoot, cols, barW) {
 
   for (var i = 0; i < pluginItems.length; i++) {
     buildPluginItem(pushBody, i, pluginItems[i], nameW, cols, i === pcursor);
+  }
+
+  if (npmPluginItems.length > 0) {
+    pushBody("", false);
+    pushBody("  " + MAGENTA + "#" + GRAY + " npm plugins" + RST, false);
+    for (var ni = 0; ni < npmPluginItems.length; ni++) {
+      var np = npmPluginItems[ni];
+      var nvstr = np.version ? (GRAY + "v" + np.version + RST) : (GRAY + "not installed" + RST);
+      pushBody("    " + DIM + np.name + RST + "  " + nvstr, false);
+    }
   }
 
   pushBody("", false);
@@ -768,7 +813,7 @@ function render() {
   pushHead("");
   pushHead("  " + BOLD + CYAN + " OpenCode" + RST + GRAY + "  Launcher" + RST);
   pushHead("  " + GRAY + "-".repeat(barW) + RST);
-  var showPluginsTab = pluginItems.length > 0;
+  var showPluginsTab = pluginItems.length > 0 || npmPluginItems.length > 0;
   var projTab = page === "projects" ? (BOLD + WHITE + BG_SEL + " Projects " + RST) : (GRAY + " Projects " + RST);
   var plugTab = showPluginsTab ? (page === "plugins" ? (BOLD + WHITE + BG_SEL + " Plugins " + RST) : (GRAY + " Plugins " + RST)) : "";
   pushHead("  " + projTab + (showPluginsTab ? "  " + plugTab + "    " + DIM + "<- ->" + RST : ""));
@@ -949,6 +994,26 @@ function handlePluginKey(key) {
         var match = plugins.find(function(r) { return r.name === pitem.name; });
         if (match) { match.autoUpdate = newVal; savePlugins(plugins); }
         flash(pitem.name + ": auto-update " + (newVal ? "ON" : "OFF"));
+        mode = "list";
+      }
+      else if (action === "disable-plugin") {
+        var plugins = loadPlugins();
+        var match = plugins.find(function(r) { return r.name === pitem.name; });
+        if (match) { match.enabled = false; savePlugins(plugins); }
+        var deployedPath = join(PLUGINS_DIR, pitem.pluginFile);
+        if (existsSync(deployedPath)) { try { unlinkSync(deployedPath); } catch {} }
+        pluginItems = buildPluginList();
+        if (pcursor >= pluginItems.length) pcursor = Math.max(0, pluginItems.length - 1);
+        flash(pitem.name + " disabled. Restart OpenCode to unload.");
+        mode = "list";
+      }
+      else if (action === "enable-plugin") {
+        var plugins = loadPlugins();
+        var match = plugins.find(function(r) { return r.name === pitem.name; });
+        if (match) { delete match.enabled; savePlugins(plugins); }
+        pluginItems = buildPluginList();
+        if (pcursor >= pluginItems.length) pcursor = Math.max(0, pluginItems.length - 1);
+        flash(pitem.name + " enabled. Use Update to deploy.");
         mode = "list";
       }
       else if (action === "commits") {
