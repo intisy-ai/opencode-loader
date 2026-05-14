@@ -276,7 +276,7 @@ function buildPluginList() {
 
 function fetchPluginRemotes(pluginItems) {
   for (var p of pluginItems) {
-    if (!p.installed) continue;
+    if (p.type === "npm" || !p.installed) continue;
     var dir = join(REPOS_DIR, p.folderName);
     gitText(["git", "fetch", "origin"], dir);
     for (var ref of ["origin/HEAD", "origin/main", "origin/master"]) {
@@ -376,9 +376,35 @@ function showCur() { process.stderr.write(E + "?25h"); }
 // ---------------------------------------------------------------------------
 
 var items = buildList();
-var pluginItems = buildPluginList();
-  
-var npmPluginItems = loadNpmPlugins();
+
+function buildCombinedPluginList() {
+  var git = buildPluginList();
+  var npm = loadNpmPlugins().map(function(np) {
+    return {
+      type: "npm",
+      name: np.name,
+      version: np.version,
+      raw: np.raw,
+      // filler fields so shared code doesn't crash
+      enabled: true,
+      autoUpdate: false,
+      installed: !!np.version,
+      deployed: !!np.version,
+      updateAvail: false,
+      localHead: "",
+      remoteHead: "",
+      latestTag: np.version || "",
+      subject: "npm plugin",
+      folderName: "",
+      url: "",
+      hasBuild: false,
+      pluginFile: ""
+    };
+  });
+  return git.concat(npm);
+}
+
+var pluginItems = buildCombinedPluginList();
 var cursor = 0;
 var pcursor = 0; // plugin page cursor
 var mode = "list"; // "list" | "actions" | "input" | "pactions"
@@ -663,6 +689,17 @@ function buildPluginItem(pushBody, i, pitem, nameW, cols, isSelected) {
   var bg = sel ? BG_SEL : "";
   var nameStyle = sel ? (BOLD + WHITE) : DIM;
 
+  // NPM plugins: simpler read-only row
+  if (pitem.type === "npm") {
+    var nvstr = pitem.version ? (GRAY + "v" + pitem.version + RST) : (GRAY + "not installed" + RST);
+    pushBody("  " + bg + arrow + nameStyle + pad(trunc(pitem.name, nameW), nameW) + RST + bg + " " + CYAN + "npm" + RST + "  " + nvstr + RST, isSelected);
+    if (sel) {
+      var subInfo = GRAY + "     managed via npm (opencode.json)" + RST;
+      pushBody("  " + subInfo, isSelected);
+    }
+    return;
+  }
+
   var statusParts = [];
   if (!pitem.enabled) {
     statusParts.push(RED + "disabled" + RST);
@@ -746,34 +783,33 @@ function buildPlugins(pushBody, pushFoot, cols, barW) {
 
   var autoCount = 0, manualCount = 0, updateCount = 0, disabledCount = 0;
   for (var p of pluginItems) {
+    if (p.type === "npm") continue;
     if (!p.enabled) disabledCount++;
     else if (p.autoUpdate) autoCount++; else manualCount++;
     if (p.updateAvail) updateCount++;
   }
 
+  var npmCount = pluginItems.filter(function(p) { return p.type === "npm"; }).length;
   pushBody("  " + MAGENTA + "#" + GRAY + " Plugins " +
     DIM + "(" + autoCount + " auto, " + manualCount + " manual" +
     (disabledCount > 0 ? ", " + RED + disabledCount + " disabled" + DIM : "") +
     (updateCount > 0 ? ", " + CYAN + updateCount + " updates" + DIM : "") +
-    (npmPluginItems.length > 0 ? ", " + GRAY + npmPluginItems.length + " npm" + DIM : "") +
+    (npmCount > 0 ? ", " + GRAY + npmCount + " npm" + DIM : "") +
     ")" + RST, false);
 
   if (!pluginFetched) {
     pushBody("  " + GRAY + "  Press " + RST + "F" + GRAY + " to check for updates" + RST, false);
   }
 
+  var lastWasGit = false;
   for (var i = 0; i < pluginItems.length; i++) {
-    buildPluginItem(pushBody, i, pluginItems[i], nameW, cols, i === pcursor);
-  }
-
-  if (npmPluginItems.length > 0) {
-    pushBody("", false);
-    pushBody("  " + MAGENTA + "#" + GRAY + " npm plugins" + RST, false);
-    for (var ni = 0; ni < npmPluginItems.length; ni++) {
-      var np = npmPluginItems[ni];
-      var nvstr = np.version ? (GRAY + "v" + np.version + RST) : (GRAY + "not installed" + RST);
-      pushBody("    " + DIM + np.name + RST + "  " + nvstr, false);
+    var pitem = pluginItems[i];
+    // Insert a section header when transitioning to npm plugins
+    if (pitem.type === "npm" && (i === 0 || pluginItems[i - 1].type !== "npm")) {
+      pushBody("", false);
+      pushBody("  " + MAGENTA + "#" + GRAY + " npm plugins" + RST, false);
     }
+    buildPluginItem(pushBody, i, pitem, nameW, cols, i === pcursor);
   }
 
   pushBody("", false);
@@ -824,7 +860,7 @@ function render() {
   pushHead("");
   pushHead("  " + BOLD + CYAN + " OpenCode" + RST + GRAY + "  Launcher" + RST);
   pushHead("  " + GRAY + "-".repeat(barW) + RST);
-  var showPluginsTab = pluginItems.length > 0 || npmPluginItems.length > 0;
+  var showPluginsTab = pluginItems.length > 0;
   var projTab = page === "projects" ? (BOLD + WHITE + BG_SEL + " Projects " + RST) : (GRAY + " Projects " + RST);
   var plugTab = showPluginsTab ? (page === "plugins" ? (BOLD + WHITE + BG_SEL + " Plugins " + RST) : (GRAY + " Plugins " + RST)) : "";
   pushHead("  " + projTab + (showPluginsTab ? "  " + plugTab + "    " + DIM + "<- ->" + RST : ""));
@@ -949,7 +985,8 @@ function handlePluginKey(key) {
     if (key === "up" || key === "w") { pcursor = Math.max(0, pcursor - 1); }
     else if (key === "down" || key === "s") { pcursor = Math.min(pluginItems.length - 1, pcursor + 1); }
     else if (key === "enter" || key === "space") {
-      if (pluginItems.length > 0) { mode = "pactions"; pacursor = 0; }
+      if (pluginItems.length > 0 && pluginItems[pcursor].type !== "npm") { mode = "pactions"; pacursor = 0; }
+      else if (pluginItems.length > 0 && pluginItems[pcursor].type === "npm") { flash(pluginItems[pcursor].name + " is managed via npm"); }
     }
     else if (key === "f") {
       flash("Fetching remotes...");
@@ -961,7 +998,7 @@ function handlePluginKey(key) {
       flash(updateCount > 0 ? updateCount + " update(s) available" : "All plugins up to date");
     }
     else if (key === "a") {
-      var toUpdate = pluginItems.filter(function(p) { return p.updateAvail || !p.deployed; });
+      var toUpdate = pluginItems.filter(function(p) { return p.type !== "npm" && (p.updateAvail || !p.deployed); });
       if (toUpdate.length === 0) {
         flash("All plugins are already up to date.");
       } else {
@@ -972,31 +1009,31 @@ function handlePluginKey(key) {
           var e = runPluginUpdate(pi);
           if (e) errors.push(pi.name + ": " + e);
         }
-        pluginItems = buildPluginList();
+        pluginItems = buildCombinedPluginList();
         if (pcursor >= pluginItems.length) pcursor = Math.max(0, pluginItems.length - 1);
         flash(errors.length > 0 ? errors.join("; ") : toUpdate.length + " plugin(s) updated. Restart OpenCode to apply.");
       }
     }
     else if (key === "u") {
-      if (pluginItems.length > 0) {
+      if (pluginItems.length > 0 && pluginItems[pcursor].type !== "npm") {
         var p = pluginItems[pcursor];
         flash("Updating " + p.name + "...");
         render();
         var err = runPluginUpdate(p);
-        pluginItems = buildPluginList();
+        pluginItems = buildCombinedPluginList();
         if (pcursor >= pluginItems.length) pcursor = Math.max(0, pluginItems.length - 1);
         flash(err ? p.name + ": " + err : p.name + " updated. Restart OpenCode to apply.");
       }
     }
     else if (key === "d") {
-      if (pluginItems.length > 0) {
+      if (pluginItems.length > 0 && pluginItems[pcursor].type !== "npm") {
         var p = pluginItems[pcursor];
         var plugins = loadPlugins();
         var match = plugins.find(function(r) { return r.name === p.name; });
         if (match) { match.enabled = false; savePlugins(plugins); }
         var deployedPath = join(PLUGINS_DIR, p.pluginFile);
         if (existsSync(deployedPath)) { try { unlinkSync(deployedPath); } catch {} }
-        pluginItems = buildPluginList();
+        pluginItems = buildCombinedPluginList();
         if (pcursor >= pluginItems.length) pcursor = Math.max(0, pluginItems.length - 1);
         flash(p.name + " disabled. Restart OpenCode to unload.");
       }
@@ -1013,7 +1050,7 @@ function handlePluginKey(key) {
         flash("Updating " + pitem.name + "...");
         render();
         var err = runPluginUpdate(pitem);
-        pluginItems = buildPluginList();
+        pluginItems = buildCombinedPluginList();
         if (pcursor >= pluginItems.length) pcursor = Math.max(0, pluginItems.length - 1);
         flash(err ? pitem.name + ": " + err : pitem.name + " updated. Restart OpenCode to apply.");
         mode = "list";
@@ -1033,7 +1070,7 @@ function handlePluginKey(key) {
         if (match) { match.enabled = false; savePlugins(plugins); }
         var deployedPath = join(PLUGINS_DIR, pitem.pluginFile);
         if (existsSync(deployedPath)) { try { unlinkSync(deployedPath); } catch {} }
-        pluginItems = buildPluginList();
+        pluginItems = buildCombinedPluginList();
         if (pcursor >= pluginItems.length) pcursor = Math.max(0, pluginItems.length - 1);
         flash(pitem.name + " disabled. Restart OpenCode to unload.");
         mode = "list";
@@ -1042,7 +1079,7 @@ function handlePluginKey(key) {
         var plugins = loadPlugins();
         var match = plugins.find(function(r) { return r.name === pitem.name; });
         if (match) { delete match.enabled; savePlugins(plugins); }
-        pluginItems = buildPluginList();
+        pluginItems = buildCombinedPluginList();
         if (pcursor >= pluginItems.length) pcursor = Math.max(0, pluginItems.length - 1);
         flash(pitem.name + " enabled. Use Update to deploy.");
         mode = "list";
@@ -1112,7 +1149,7 @@ function handlePluginKey(key) {
           err = "Build output not found";
         }
       }
-      pluginItems = buildPluginList();
+      pluginItems = buildCombinedPluginList();
       if (err) flash("Error: " + err);
       else flash("Downgraded to " + citem.hash.substring(0,7));
       mode = "list";
