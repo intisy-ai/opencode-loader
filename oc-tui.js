@@ -70,7 +70,7 @@ function migrateConfigs() {
   }
   var legacyPlugins = join(CONFIG_DIR, "plugins.json");
   if (existsSync(legacyPlugins) && !existsSync(PLUGINS_JSON)) {
-    try { copyFileSync(legacyPlugins, PLUGINS_JSON); } catch {}
+    try { copyFileSync(legacyPlugins, PLUGINS_JSON); try { unlinkSync(legacyPlugins); } catch {} } catch {}
   }
 }
 
