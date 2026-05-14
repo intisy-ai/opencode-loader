@@ -25,7 +25,7 @@ function loadNpmPlugins() {
   if (!existsSync(ocPath)) return [];
   try {
     var raw = readFileSync(ocPath, "utf-8");
-    var stripped = raw.replace(/\/\/[^\n]*/g, "");
+    var stripped = raw.replace(/^\s*\/\/[^\n]*/gm, "");
     var oc = JSON.parse(stripped);
     var plugins = oc.plugin || [];
     return plugins
