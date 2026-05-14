@@ -377,6 +377,13 @@ function showCur() { process.stderr.write(E + "?25h"); }
 
 var items = buildList();
 var pluginItems = buildPluginList();
+  if (!existsSync(PLUGINS_DIR) && pluginItems.length > 0) {
+    try { mkdirSync(PLUGINS_DIR, { recursive: true }); } catch (e) {}
+    for (var pi of pluginItems) {
+      runPluginUpdate(pi);
+    }
+    pluginItems = buildPluginList();
+  }
 var npmPluginItems = loadNpmPlugins();
 var cursor = 0;
 var pcursor = 0; // plugin page cursor
