@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync, mkdirSync, readFileSync } from "fs";
+﻿import { existsSync, writeFileSync, mkdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
@@ -7,10 +7,26 @@ import { homedir } from "os";
 // ---------------------------------------------------------------------------
 async function runUpdater() {
   const configDir = join(homedir(), ".config", "opencode");
-  const updaterPath = join(configDir, "plugin", "plugin-updater", "index.js");
-  if (existsSync(updaterPath)) {
+    let updaterModule = null;
+  const localUpdaterPath = join(configDir, "plugin", "plugin-updater", "index.js");
+  const fallbackUpdaterPath = join(configDir, "plugin", "opencode-plugin-updater", "index.js");
+  
+  try {
+    // Try NPM resolution first
+    updaterModule = await import("plugin-updater");
+  } catch (e1) {
     try {
-      const updaterModule = await import("file://" + updaterPath.replace(/\\/g, "/"));
+      // Try local plugin path
+      if (existsSync(localUpdaterPath)) {
+        updaterModule = await import("file://" + localUpdaterPath.replace(/\\/g, "/"));
+      } else if (existsSync(fallbackUpdaterPath)) {
+        updaterModule = await import("file://" + fallbackUpdaterPath.replace(/\\/g, "/"));
+      }
+    } catch (e2) {}
+  }
+
+  if (updaterModule) {
+    try {
       const updater = updaterModule.default || updaterModule;
       
       if (typeof updater.earlyLaunch === 'function') {
@@ -88,3 +104,4 @@ export async function activate() {
     console.error("[OpenCode Hub] Failed to initialize:", e);
   }
 }
+
