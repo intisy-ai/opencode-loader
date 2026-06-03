@@ -1,154 +1,105 @@
 import { tool } from "@opencode-ai/plugin";
-import { existsSync, writeFileSync, mkdirSync, unlinkSync, readFileSync } from "fs";
-import { join, dirname } from "path";
+import { existsSync, writeFileSync, mkdirSync, readFileSync } from "fs";
+import { join } from "path";
 import { homedir } from "os";
 
 // ---------------------------------------------------------------------------
-// Find core/tui.js — works for both npm and plugin-updater installs
+// Run Plugin Updater
 // ---------------------------------------------------------------------------
+async function runUpdater() {
+  const updaterPath = join(homedir(), ".config", "github", "plugin-updater", "index.js");
+  if (existsSync(updaterPath)) {
+    try {
+      const updaterModule = await import("file://" + updaterPath.replace(/\\/g, "/"));
+      const updater = updaterModule.default || updaterModule;
+      
+      // Update core-hub
+      updater.updatePlugin("core-hub", "https://github.com/intisy/core-hub.git");
+      updater.deployToExecutionDir("core-hub", join(homedir(), ".local", "bin"));
 
-  function findTuiScript() {
-    // 1. Same directory as this plugin file (npm install case)
-    var sameDirPath = join(import.meta.dirname, "core/tui.js");
-    if (existsSync(sameDirPath)) return sameDirPath;
-  
-    // 2. Find config dir, then check repos/intisy/opencode-hub/ (updater case)
-    var configDir = findConfigDir(import.meta.dirname);
-  if (configDir) {
-    var repoPath = join(configDir, "repos", "intisy", "opencode-hub", "core/tui.js");
-    if (existsSync(repoPath)) return repoPath;
+      // Update plugins from plugins.json
+      const configDir = join(homedir(), ".config", "opencode");
+      const pluginsJsonPath = join(configDir, "plugins.json");
+      if (existsSync(pluginsJsonPath)) {
+        try {
+          const plugins = JSON.parse(readFileSync(pluginsJsonPath, "utf-8"));
+          for (const plugin of plugins) {
+            if (plugin.url && plugin.enabled !== false && plugin.type !== "npm") {
+              const branch = plugin.branch || null;
+              const commit = plugin.commit || null;
+              updater.updatePlugin(plugin.name, plugin.url, branch, commit);
+              updater.deployToExecutionDir(plugin.name, join(configDir, "plugin"));
+            }
+          }
+        } catch (e) {
+          console.error("[OpenCode Hub] Failed to parse plugins.json", e);
+        }
+      }
+    } catch (e) {
+      console.error("[OpenCode Hub] Failed to run plugin-updater", e);
+    }
   }
-
-  return null;
-}
-
-function findConfigDir(start) {
-  var dir = start;
-  for (var i = 0; i < 8; i++) {
-    if (existsSync(join(dir, "opencode.json"))) return dir;
-    if (existsSync(join(dir, "config", "plugins.json"))) return dir;
-    var parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return null;
 }
 
 // ---------------------------------------------------------------------------
 // Install / remove the `oc` shell command
 // ---------------------------------------------------------------------------
-
 function getBinDir() {
-  if (process.platform === "win32") {
-    return join(homedir(), ".local", "bin");
-  }
   return join(homedir(), ".local", "bin");
 }
 
-  function installOcCommand() {
-    var tuiPath = findTuiScript();
-    if (!tuiPath) return;
-  
-    var binDir = getBinDir();
-    if (!existsSync(binDir)) try { mkdirSync(binDir, { recursive: true }); } catch {}
-    var coreDir = join(binDir, "core");
-    if (!existsSync(coreDir)) try { mkdirSync(coreDir, { recursive: true }); } catch {}
-  
-    // Always keep binDir/core/tui.js in sync with the source (so `oc` always runs latest)
-  var binTuiPath = join(binDir, "core/tui.js");
-  try {
-    var srcContent = readFileSync(tuiPath, "utf-8");
-    var dstContent = existsSync(binTuiPath) ? readFileSync(binTuiPath, "utf-8") : null;
-    if (srcContent !== dstContent) {
-      writeFileSync(binTuiPath, srcContent, "utf-8");
-    }
-  } catch {}
-  // Point shell launchers at the stable binDir copy
-  tuiPath = binTuiPath;
+async function installOcCommand() {
+  await runUpdater();
 
-  var tuiPathEscaped = tuiPath.replace(/\\/g, "\\\\");
+  const binDir = getBinDir();
+  if (!existsSync(binDir)) try { mkdirSync(binDir, { recursive: true }); } catch {}
+  
+  const binTuiPath = join(binDir, "core-hub", "tui.js");
+  if (!existsSync(binTuiPath)) return; // Wait for updater to succeed next time
+
+  const tuiPathEscaped = binTuiPath.replace(/\\/g, "\\\\");
 
   if (process.platform === "win32") {
-    // oc.cmd for Windows
-    var cmdPath = join(binDir, "oc.cmd");
-    var cmdContent = '@echo off\r\n'
-      + 'set "tmp=%TEMP%\\oc-output-%RANDOM%.tmp"\r\n'
-      + 'set "OC_OUTPUT=%tmp%"\r\n'
-      + 'call bun "' + tuiPath + '" %*\r\n'
-      + 'set "EXIT_CODE=%ERRORLEVEL%"\r\n'
-      + 'if exist "%tmp%" set /p dir=<"%tmp%" 2>nul\r\n'
-      + 'if exist "%tmp%" del "%tmp%" 2>nul\r\n'
-      + 'if %EXIT_CODE% EQU 42 (\r\n'
-      + '  call opencode %*\r\n'
-      + '  exit /b\r\n'
-      + ')\r\n'
-      + 'if defined dir (\r\n'
-      + '  cd /d "%dir%"\r\n'
-      + '  call opencode\r\n'
-      + ')\r\n';
-    try { writeFileSync(cmdPath, cmdContent, "utf-8"); } catch {}
+    const cmdPath = join(binDir, "oc.cmd");
+    const cmdContent = `@echo off\nnode "${tuiPathEscaped}" %*`;
+    writeFileSync(cmdPath, cmdContent, "utf-8");
   } else {
-    // oc for Unix
-    var shPath = join(binDir, "oc");
-    var shContent = '#!/bin/sh\n'
-      + 'tmp=$(mktemp)\n'
-      + 'OC_OUTPUT="$tmp" bun "' + tuiPathEscaped + '" "$@"\n'
-      + 'EXIT_CODE=$?\n'
-      + 'dir=$(cat "$tmp" 2>/dev/null)\n'
-      + 'rm -f "$tmp"\n'
-      + 'if [ $EXIT_CODE -eq 42 ]; then\n'
-      + '  exec opencode "$@"\n'
-      + 'fi\n'
-      + 'if [ -n "$dir" ]; then\n'
-      + '  cd "$dir" && opencode\n'
-      + 'fi\n';
-    try {
-      writeFileSync(shPath, shContent, { mode: 0o755 });
-    } catch {}
+    const shPath = join(binDir, "oc");
+    const shContent = `#!/bin/sh\nnode "${tuiPathEscaped}" "$@"`;
+    writeFileSync(shPath, shContent, "utf-8");
+    try { import("child_process").then(cp => cp.execSync(`chmod +x "${shPath}"`)); } catch {}
+  }
+
+  // Add path notice if needed
+  if (process.env.PATH && !process.env.PATH.includes(binDir)) {
+    console.log(`[OpenCode Hub] Note: Add ${binDir} to your PATH to use the 'oc' command.`);
   }
 }
 
-function removeOcCommand() {
-  var binDir = getBinDir();
-  var files = ["oc", "oc.cmd"];
-  var removed = [];
-  for (var f of files) {
-    var p = join(binDir, f);
-    if (existsSync(p)) {
-      try { unlinkSync(p); removed.push(f); } catch {}
-    }
+function uninstallOcCommand() {
+  const binDir = getBinDir();
+  if (process.platform === "win32") {
+    try { import("fs").then(fs => fs.unlinkSync(join(binDir, "oc.cmd"))); } catch {}
+  } else {
+    try { import("fs").then(fs => fs.unlinkSync(join(binDir, "oc"))); } catch {}
   }
-  return removed;
 }
 
 // ---------------------------------------------------------------------------
-// Install on load (with guard against dual execution)
+// Extension Hook
 // ---------------------------------------------------------------------------
-
-if (!globalThis.__ocLauncherInstalled) {
-  globalThis.__ocLauncherInstalled = true;
-  installOcCommand();
+export async function activate() {
+  try {
+    await installOcCommand();
+  } catch (err) {
+    console.error("[OpenCode Hub] error during activation:", err);
+  }
 }
 
-// ---------------------------------------------------------------------------
-// Plugin export
-// ---------------------------------------------------------------------------
-
-export default async function OpenCodeLauncher(ctx) {
-  return {
-    tool: {
-      oc_remove: tool({
-        description:
-          "Remove the oc launcher command. Deletes oc, oc.cmd from ~/.local/bin. The launcher will be reinstalled on next opencode start if the plugin is still active.",
-        args: {
-          _placeholder: tool.schema.boolean().describe("Placeholder. Always pass true."),
-        },
-        async execute() {
-          var removed = removeOcCommand();
-          if (removed.length === 0) return "No oc commands found to remove.";
-          return "Removed: " + removed.join(", ") + " from " + getBinDir();
-        },
-      }),
-    },
-  };
+export function deactivate() {
+  try {
+    uninstallOcCommand();
+  } catch (err) {
+    console.error("[OpenCode Hub] error during deactivation:", err);
+  }
 }
