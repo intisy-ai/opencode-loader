@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "opencode-loader",
   "version": "1.1.1",
   "description": "TUI launcher and oc shell command for OpenCode.",
@@ -10,9 +10,20 @@
     "type": "git",
     "url": "git+https://github.com/intisy/opencode-loader.git"
   },
-  "keywords": ["opencode", "plugin", "launcher", "tui"],
-  "files": ["dist/", "README.md", "LICENSE"],
-  "engines": { "node": ">=20.0.0" },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "launcher",
+    "tui"
+  ],
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "build": "npx tsc --project core/tsconfig.json && npx tsc",
     "prepublishOnly": "npm run build",
@@ -20,8 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "plugin-updater": "^1.0.21",
     "typescript": "^6.0.3"
   }
 }
-
-
