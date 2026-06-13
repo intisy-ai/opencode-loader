@@ -1,7 +1,7 @@
 import { existsSync, writeFileSync, mkdirSync, readFileSync, appendFileSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 
 const START_TIME = new Date().toISOString().replace(/:/g, "-").split(".")[0];
 
@@ -160,6 +160,49 @@ export async function cleanup(configDir?: string) {
     }
   }
 }
+
+// OpenCode loads this deployed file as a plugin and invokes every export as a
+// hook. This one declares auth for the upstream provider and hands each
+// outbound request to core-auth's transport-agnostic router, which dispatches
+// to the active provider driver. core-auth is resolved by absolute path from
+// the repos clone: this file is deployed as a flat copy, so a relative import
+// to the sibling submodule would not exist next to it.
+let CORE_AUTH_ROUTE: ((request: Request) => Promise<Response>) | null = null;
+
+function deployedConfigDir(): string {
+  return dirname(dirname(fileURLToPath(import.meta.url)));
+}
+
+async function loadCoreAuthRoute() {
+  if (CORE_AUTH_ROUTE) return CORE_AUTH_ROUTE;
+  const configDir = deployedConfigDir();
+  if (!process.env.HUB_CONFIG_DIR) process.env.HUB_CONFIG_DIR = configDir;
+  const indexPath = join(configDir, "repos", "opencode-loader", "core-auth", "dist", "index.js");
+  if (!existsSync(indexPath)) {
+    writeLog(configDir, "core-auth not found at " + indexPath, true);
+    return null;
+  }
+  const mod = await import(pathToFileURL(indexPath).href);
+  CORE_AUTH_ROUTE = mod.route;
+  return CORE_AUTH_ROUTE;
+}
+
+export const CoreAuthProvider = async () => {
+  writeLog(deployedConfigDir(), "CoreAuthProvider registered (provider: anthropic)");
+  return {
+    auth: {
+      provider: "anthropic",
+      loader: async () => ({
+        apiKey: "core-auth",
+        async fetch(input: any, init: any) {
+          const route = await loadCoreAuthRoute();
+          if (!route) return fetch(input, init);
+          return route(new Request(input, init));
+        },
+      }),
+    },
+  };
+};
 
 export async function activate() {
   const configDir = getAppConfigDir();
