@@ -1,9 +1,11 @@
 // @ts-nocheck
-// Loader-owned "Providers" tab (loaded via HUB_TUI_EXTENSION). Auto-discovers
-// every installed core-auth provider from its package.json claudeHub declaration
-// (no per-provider code needed) and lets you browse each provider's models and
-// edit its "Auto" meta-model: ranking source + include/exclude + manual order.
-// Reads/writes the same config files core-auth uses.
+// Loader-owned "Providers" tab (loaded via HUB_TUI_EXTENSION). Fully GENERIC:
+// it knows nothing about any specific provider. It auto-discovers providers from
+// each installed plugin's package.json claudeHub declaration, lists their models
+// from opencode.json, and edits the "Auto" meta-model purely from the generic
+// metadata core-auth writes (core-auth-models.json: { models:{id:{name,group}},
+// ranking:[id] } + core-auth.json auto config). No provider names, prefixes, or
+// model-quality knowledge live here.
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
@@ -17,57 +19,42 @@ function writeJSON(p, obj) { try { if (!existsSync(cfgFolder())) mkdirSync(cfgFo
 function modelsCache() { return readJSON(join(cfgFolder(), "core-auth-models.json"), {}); }
 function coreConfig() { return readJSON(join(cfgFolder(), "core-auth.json"), {}); }
 function saveCoreConfig(cfg) { writeJSON(join(cfgFolder(), "core-auth.json"), cfg); }
-
-// Uniform model list for ANY provider: opencode.json provider.<id>.models is
-// where every provider (dynamic or static) merges its catalog, so all providers
-// list the same way regardless of whether they fetch models.
 function opencodeConfigPath() { return join(configDir(), existsSync(join(configDir(), "opencode.jsonc")) ? "opencode.jsonc" : "opencode.json"); }
 function opencodeModels(pid) {
   var c = readJSON(opencodeConfigPath(), {});
   var m = (c.provider && c.provider[pid] && c.provider[pid].models) || {};
-  return Object.keys(m).map(function (id) { return { id: id, name: stripSuffix((m[id] && m[id].name) || id) }; });
+  return Object.keys(m).map(function (id) { return { id: id, name: (m[id] && m[id].name) || id }; });
 }
-function stripSuffix(name) { return String(name).replace(/\s*\((Antigravity|Gemini CLI|Claude Code|Claude)\)\s*$/i, ""); }
-function hasAuto(pid) { return catalogRanking(pid).length > 0; }
 
-// Discover providers from every installed plugin's package.json claudeHub
-// declaration, unioned with whatever's already in the model cache. This is what
-// makes new providers appear automatically with zero changes in the provider.
+// Discover providers from every installed plugin's package.json (zero per-provider
+// code), unioned with whatever the model cache already knows.
 function providerIds() {
-  const ids = [];
-  let repos = [];
+  var ids = [];
+  var repos = [];
   try { repos = readdirSync(reposDir()); } catch (e) {}
-  for (const repo of repos) {
-    const pkg = readJSON(join(reposDir(), repo, "package.json"), null);
-    const declared = (pkg && pkg.claudeHub && pkg.claudeHub.authProviders) || (pkg && pkg.authProviders) || [];
-    for (const p of declared) { const id = p && (p.name || repo); if (id && ids.indexOf(id) < 0) ids.push(id); }
+  for (var i = 0; i < repos.length; i++) {
+    var pkg = readJSON(join(reposDir(), repos[i], "package.json"), null);
+    var declared = (pkg && pkg.claudeHub && pkg.claudeHub.authProviders) || (pkg && pkg.authProviders) || [];
+    for (var j = 0; j < declared.length; j++) { var id = declared[j] && (declared[j].name || repos[i]); if (id && ids.indexOf(id) < 0) ids.push(id); }
   }
-  for (const id of Object.keys(modelsCache())) if (ids.indexOf(id) < 0) ids.push(id);
+  var cache = modelsCache();
+  for (var k of Object.keys(cache)) if (ids.indexOf(k) < 0) ids.push(k);
   return ids;
 }
 
-function catalogRanking(pid) { var e = modelsCache()[pid]; return (e && e.ranking) || []; }
-function cliModels(pid) {
-  var e = modelsCache()[pid]; var m = (e && e.models) || {}; var rank = catalogRanking(pid);
-  return Object.keys(m).filter(function (k) { return k.indexOf("antigravity-") !== 0 && rank.indexOf(k) < 0; });
-}
+function catalogModels(pid) { var e = modelsCache()[pid]; return (e && e.models) || {}; }
+function ranking(pid) { var e = modelsCache()[pid]; return (e && e.ranking) || []; }
+function hasAuto(pid) { return ranking(pid).length > 0; }
 function modelCount(pid) { return opencodeModels(pid).length; }
-function cleanName(pid, key) {
-  var e = modelsCache()[pid]; var m = e && e.models && e.models[key];
-  return stripSuffix((m && m.name) || key);
-}
-function nameOfRanked(pid, rawId) { return cleanName(pid, "antigravity-" + rawId); }
+function nameOf(pid, id) { var m = catalogModels(pid)[id]; return (m && m.name) || id; }
+function groupOf(pid, id) { var m = catalogModels(pid)[id]; return (m && m.group) || ""; }
 
 var SOURCE_CYCLE = { manual: "recommended", recommended: "leaderboard", leaderboard: "manual" };
 var SOURCE_LABEL = { manual: "Manual", recommended: "Recommended", leaderboard: "Leaderboard (quality)" };
 
-var QUALITY = [[/opus/i, 100], [/gemini-3\.1-pro|gemini-3-pro|pro-agent/i, 92], [/sonnet/i, 85], [/gpt|oss/i, 75], [/gemini-3\.5-flash|gemini-3-flash/i, 58], [/flash-lite|flash-extra-low/i, 45], [/flash/i, 55]];
-function qScore(id) { for (var i = 0; i < QUALITY.length; i++) if (QUALITY[i][0].test(id)) return QUALITY[i][1]; return 50; }
-function qualityOrder(ids) { return ids.map(function (id, i) { return { id: id, i: i, s: qScore(id) }; }).sort(function (a, b) { return (b.s - a.s) || (a.i - b.i); }).map(function (x) { return x.id; }); }
-
 function autoConfig(pid) {
   var stored = ((coreConfig().auto || {})[pid]) || {};
-  var cat = catalogRanking(pid);
+  var cat = ranking(pid);
   function reconcile(ids) { var out = (Array.isArray(ids) ? ids : []).filter(function (id) { return cat.indexOf(id) >= 0; }); cat.forEach(function (id) { if (out.indexOf(id) < 0) out.push(id); }); return out; }
   var source = (stored.source === "recommended" || stored.source === "leaderboard") ? stored.source : "manual";
   var order = source === "recommended" ? cat.slice()
@@ -86,9 +73,19 @@ function setAuto(pid, patch) {
   };
   saveCoreConfig(cfg);
 }
-function applySource(pid, source) {
-  if (source === "leaderboard") setAuto(pid, { source: source, leaderboardOrder: qualityOrder(catalogRanking(pid)) });
-  else setAuto(pid, { source: source });
+
+// non-ranked models that opted into a display group (e.g. a separate pool)
+function groupedExtras(pid) {
+  var rank = ranking(pid); var models = catalogModels(pid);
+  var order = []; var byGroup = {};
+  Object.keys(models).forEach(function (id) {
+    if (rank.indexOf(id) >= 0) return;
+    var g = models[id] && models[id].group;
+    if (!g) return;   // ungrouped non-ranked (e.g. the Auto pseudo-model) stays hidden
+    if (!byGroup[g]) { byGroup[g] = []; order.push(g); }
+    byGroup[g].push(id);
+  });
+  return { order: order, byGroup: byGroup };
 }
 
 var tab = { mode: "providers", pcur: 0, cur: 0, pid: null };
@@ -99,30 +96,24 @@ function render(state, h) {
     h.pushBody("", false);
     h.pushBody("  " + h.BOLD + h.WHITE + tab.pid + h.RST + h.GRAY + " — Auto" + h.RST, false);
     h.pushBody("", false);
-    if (!ac.order.length) {
-      h.pushBody("    " + h.DIM + "No models yet — sign in with oc auth login, then return here." + h.RST, false);
-      h.pushFoot("  " + h.GRAY + "-".repeat(h.barW) + h.RST);
-      h.pushFoot("  " + h.DIM + "Esc Back" + h.RST);
-      return;
-    }
     var srcSel = tab.cur === 0;
     h.pushBody("  " + (srcSel ? h.YELLOW + "> " : "  ") + (srcSel ? h.BG_SEL + h.BOLD + h.WHITE : h.CYAN) + "Source: " + SOURCE_LABEL[ac.source] + h.RST + (srcSel ? h.DIM + "   (Enter/r to change)" + h.RST : ""), srcSel);
-    h.pushBody("  " + h.DIM + (ac.source === "manual" ? "Tries top-to-bottom, skipping rate-limited models. u/d reorders." : ac.source === "recommended" ? "Auto-ordered by the provider's recommendation." : "Auto-ordered by quality. Add leaderboard.apiKey for live scores.") + h.RST, false);
+    h.pushBody("  " + h.DIM + (ac.source === "manual" ? "Tries top-to-bottom, skipping rate-limited models. u/d reorders." : ac.source === "recommended" ? "Auto-ordered by the provider's recommendation." : "Auto-ordered by quality; applies on next opencode start.") + h.RST, false);
     h.pushBody("", false);
     ac.order.forEach(function (id, i) {
       var sel = tab.cur === i + 1;
       var inc = ac.excluded.indexOf(id) < 0;
       var box = (inc ? h.GREEN + "[x]" : h.DIM + "[ ]") + h.RST;
-      var name = nameOfRanked(tab.pid, id);
-      var label = sel ? (h.BG_SEL + h.BOLD + h.WHITE + name + h.RST) : ((inc ? h.GRAY : h.DIM) + (i + 1) + ". " + name + h.RST);
+      var nm = nameOf(tab.pid, id);
+      var label = sel ? (h.BG_SEL + h.BOLD + h.WHITE + nm + h.RST) : ((inc ? h.GRAY : h.DIM) + (i + 1) + ". " + nm + h.RST);
       h.pushBody("  " + (sel ? h.YELLOW + "> " + h.RST : "  ") + box + " " + label, sel);
     });
-    var cli = cliModels(tab.pid);
-    if (cli.length) {
+    var ex = groupedExtras(tab.pid);
+    ex.order.forEach(function (g) {
       h.pushBody("", false);
-      h.pushBody("  " + h.DIM + "Gemini CLI — separate free pool, not part of Auto" + h.RST, false);
-      cli.forEach(function (k) { h.pushBody("    " + h.DIM + "· " + cleanName(tab.pid, k) + h.RST, false); });
-    }
+      h.pushBody("  " + h.DIM + g + h.RST, false);   // group label is provider-supplied, shown verbatim
+      ex.byGroup[g].forEach(function (id) { h.pushBody("    " + h.DIM + "· " + nameOf(tab.pid, id) + h.RST, false); });
+    });
     h.pushFoot("  " + h.GRAY + "-".repeat(h.barW) + h.RST);
     h.pushFoot("  " + h.DIM + "^v Move   Enter/r Source   Space Toggle   u/d Reorder   Esc Back" + h.RST);
     return;
@@ -150,11 +141,10 @@ function render(state, h) {
   pids.forEach(function (pid, i) {
     var sel = tab.pcur === i;
     var count = modelCount(pid);
-    var meta = count ? (count + " models") : "no models yet";
-    h.pushBody("  " + (sel ? h.YELLOW + "> " + h.RST : "  ") + (sel ? h.BG_SEL + h.BOLD + h.WHITE : h.GRAY) + pid + h.RST + h.DIM + "  " + meta + h.RST, sel);
+    h.pushBody("  " + (sel ? h.YELLOW + "> " + h.RST : "  ") + (sel ? h.BG_SEL + h.BOLD + h.WHITE : h.GRAY) + pid + h.RST + h.DIM + "  " + (count ? count + " models" : "no models yet") + h.RST, sel);
   });
   h.pushFoot("  " + h.GRAY + "-".repeat(h.barW) + h.RST);
-  h.pushFoot("  " + h.DIM + "^v Move   Enter Configure Auto   Tab Switch   Q Quit" + h.RST);
+  h.pushFoot("  " + h.DIM + "^v Move   Enter Configure   Tab Switch   Q Quit" + h.RST);
 }
 
 function handleKey(key, state, tuiApi) {
@@ -162,26 +152,25 @@ function handleKey(key, state, tuiApi) {
     var ac = autoConfig(tab.pid);
     var rows = ac.order.length + 1;
     if (key === "escape" || key === "q") { tab.mode = "providers"; tab.cur = 0; return; }
-    if (!ac.order.length) return;
     if (key === "up" || key === "w") { tab.cur = (tab.cur - 1 + rows) % rows; return; }
     if (key === "down" || key === "s") { tab.cur = (tab.cur + 1) % rows; return; }
     if (tab.cur === 0) {
-      if (key === "r" || key === "enter" || key === "space") { var ns = SOURCE_CYCLE[ac.source]; applySource(tab.pid, ns); if (tuiApi && tuiApi.flash) tuiApi.flash("Source: " + SOURCE_LABEL[ns]); }
+      if (key === "r" || key === "enter" || key === "space") { var ns = SOURCE_CYCLE[ac.source]; setAuto(tab.pid, { source: ns }); if (tuiApi && tuiApi.flash) tuiApi.flash("Source: " + SOURCE_LABEL[ns] + (ns === "leaderboard" ? " (applies next start)" : "")); }
       return;
     }
     var idx = tab.cur - 1; var id = ac.order[idx];
     if (!id) return;
     if (key === "space" || key === "enter") {
-      var ex = ac.excluded.slice(); var at = ex.indexOf(id);
-      if (at >= 0) ex.splice(at, 1); else ex.push(id);
-      setAuto(tab.pid, { excluded: ex }); return;
+      var exc = ac.excluded.slice(); var at = exc.indexOf(id);
+      if (at >= 0) exc.splice(at, 1); else exc.push(id);
+      setAuto(tab.pid, { excluded: exc }); return;
     }
     if ((key === "u" || key === "[") && ac.source === "manual" && idx > 0) { var up = ac.order.slice(); var t = up[idx - 1]; up[idx - 1] = up[idx]; up[idx] = t; setAuto(tab.pid, { order: up }); tab.cur--; return; }
     if ((key === "d" || key === "]") && ac.source === "manual" && idx < ac.order.length - 1) { var dn = ac.order.slice(); var t2 = dn[idx + 1]; dn[idx + 1] = dn[idx]; dn[idx] = t2; setAuto(tab.pid, { order: dn }); tab.cur++; return; }
     return;
   }
   if (tab.mode === "browse" && tab.pid) {
-    var ms = opencodeModels(tab.pid); var n = Math.max(1, ms.length);
+    var n = Math.max(1, opencodeModels(tab.pid).length);
     if (key === "escape" || key === "q") { tab.mode = "providers"; tab.cur = 0; return; }
     if (key === "up" || key === "w") { tab.cur = (tab.cur - 1 + n) % n; return; }
     if (key === "down" || key === "s") { tab.cur = (tab.cur + 1) % n; return; }
