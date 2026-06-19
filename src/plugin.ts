@@ -81,11 +81,13 @@ function installOcWrapper(configDir: string) {
     join(configDir, "repos", "opencode-loader", "core", "dist", "tui.js"),
     join(homedir(), ".cache", "opencode", "packages", "opencode-loader@latest", "node_modules", "opencode-loader", "core", "dist", "tui.js"),
   ];
+  // the loader's own custom Providers tab (auto-discovers all installed providers)
+  const extPath = join(configDir, "repos", "opencode-loader", "dist", "tui-extension.js");
   writeLog(configDir, "Installing oc wrapper with runtime TUI resolution");
 
   if (process.platform === "win32") {
     const cmdPath = join(binDir, "oc.cmd");
-    const cmdLines = ["@echo off", "setlocal"];
+    const cmdLines = ["@echo off", "setlocal", `set "HUB_TUI_EXTENSION=${extPath}"`];
     for (const candidate of tuiCandidates) {
       cmdLines.push(`if exist "${candidate}" ( bun run "${candidate}" %* & exit /b %errorlevel% )`);
     }
@@ -97,6 +99,7 @@ function installOcWrapper(configDir: string) {
     const lines = [
       "#!/usr/bin/env bash",
       'export PATH="$HOME/.bun/bin:$PATH"',
+      `export HUB_TUI_EXTENSION="${extPath}"`,
       'TUI=""',
       "for candidate in \\",
       ...tuiCandidates.map((candidate, index) =>
