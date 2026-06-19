@@ -4,15 +4,9 @@
 // renders that provider's MENU MODEL (its handler's menuModel() export = core-auth
 // buildAccountMenu) natively, inside the loader chrome/style. The model + all its
 // logic live in core-auth (shared with `oc auth login`); this only draws it.
-import { existsSync, readFileSync, readdirSync, appendFileSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
-
-// TEMP trace to a fixed file (the TUI clears the screen, so errors never stay
-// visible): cat ~/.config/opencode/loader-tab.log
-function dbg(message) {
-  try { appendFileSync(join(process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode"), "loader-tab.log"), "[" + new Date().toISOString() + "] " + message + "\n"); } catch (e) {}
-}
 
 function configDir() { return process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode"); }
 function reposDir() { return join(configDir(), "repos"); }
@@ -59,15 +53,13 @@ function applyAction(a, tuiApi) {
 function openProvider(p, tuiApi) {
   if (!p.handler || !existsSync(p.handler)) { try { tuiApi.flash("No menu for " + p.id); } catch (e) {} return; }
   if (!tuiApi.runBlocking || !tuiApi.setTextInput) { try { tuiApi.flash("Loader too old — update to manage providers"); } catch (e) {} return; }
-  dbg("openProvider " + p.id + " handler=" + p.handler);
   tuiApi.runBlocking(async function () {
     try {
       var mod = await import(p.handler);
-      dbg("imported " + p.id + " menuModel=" + typeof mod.menuModel + " menu=" + typeof mod.menu);
-      if (typeof mod.menuModel === "function") { tab.stack = [mod.menuModel]; var m = curMenu(); tab.cur = m ? selectableIdx(m.items, -1, 1) : 0; tab.mode = "menu"; tuiApi.setTextInput(true); dbg("menu mode entered, items=" + (m ? m.items.length : 0)); }
+      if (typeof mod.menuModel === "function") { tab.stack = [mod.menuModel]; var m = curMenu(); tab.cur = m ? selectableIdx(m.items, -1, 1) : 0; tab.mode = "menu"; tuiApi.setTextInput(true); }
       else if (typeof mod.menu === "function") await mod.menu();   // fallback: provider has no model, use its own menu
       else process.stdout.write(p.id + " has no menu.\n");
-    } catch (e) { dbg("openProvider THREW " + (e && e.stack || e)); process.stdout.write("Menu failed: " + (e && e.message || e) + "\n"); }
+    } catch (e) { process.stdout.write("Menu failed: " + (e && e.message || e) + "\n"); }
   });
 }
 
@@ -132,9 +124,8 @@ function handleKey(key, state, tuiApi) {
     if (key === "enter") {
       var item = menu.items[tab.cur];
       if (!item || typeof item.run !== "function") return;
-      dbg("enter item '" + item.label + "' suspend=" + !!item.suspend);
-      var r; try { r = item.run(); } catch (e) { dbg("run() sync THREW " + (e && e.stack || e)); return; }
-      if (r && typeof r.then === "function") tuiApi.runBlocking(async function () { try { var a = await r; dbg("run() resolved keys=" + Object.keys(a || {}).join(",")); applyAction(a, tuiApi); } catch (e) { dbg("run() async THREW " + (e && e.stack || e)); process.stdout.write(String(e) + "\n"); } });
+      var r; try { r = item.run(); } catch (e) { return; }
+      if (r && typeof r.then === "function") tuiApi.runBlocking(async function () { try { applyAction(await r, tuiApi); } catch (e) { process.stdout.write(String(e) + "\n"); } });
       else applyAction(r, tuiApi);
       return;
     }
@@ -148,10 +139,5 @@ function handleKey(key, state, tuiApi) {
 }
 
 export default function (tuiApi) {
-  try {
-    process.on("uncaughtException", function (e) { dbg("UNCAUGHT " + (e && e.stack || e)); });
-    process.on("unhandledRejection", function (e) { dbg("UNHANDLED_REJECTION " + (e && e.stack || e)); });
-    process.on("exit", function (code) { dbg("process exit code=" + code); });
-  } catch (e) {}
   tuiApi.registerTab({ id: "providers", label: "Providers", render: render, handleKey: handleKey });
 }
