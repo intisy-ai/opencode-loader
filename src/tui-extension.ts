@@ -79,6 +79,14 @@ function render(state, h) {
     h.pushBody("  " + h.BOLD + h.WHITE + "" + (tab.input.title || "Input") + h.RST, false);
     if (tab.input.message) String(tab.input.message).split("\n").forEach(function (line) { h.pushBody("  " + h.DIM + line + h.RST, false); });
     h.pushBody("", false);
+    if (tab.input.pending) {
+      // complete() is in flight (e.g. a slow token exchange) — show progress in
+      // place of the field instead of closing the menu and surfacing the result later
+      h.pushBody("  " + h.YELLOW + (tab.input.pendingLabel || "Working…") + h.RST, false);
+      h.pushFoot("  " + h.GRAY + "-".repeat(h.barW) + h.RST);
+      h.pushFoot("  " + h.DIM + "Please wait…" + h.RST);
+      return;
+    }
     h.pushBody("  " + h.YELLOW + "> " + h.RST + h.WHITE + (tab.inputBuf || "") + h.RST + h.DIM + "_" + h.RST, false);
     h.pushFoot("  " + h.GRAY + "-".repeat(h.barW) + h.RST);
     h.pushFoot("  " + h.DIM + "Paste, then Enter   Esc Cancel" + h.RST);
@@ -119,11 +127,13 @@ function render(state, h) {
 
 function handleKey(key, state, tuiApi) {
   if (tab.mode === "menu" && tab.input) {
+    if (tab.input.pending) return;   // complete() in flight — ignore keys until it settles
     if (key === "escape") { var inpE = tab.input; tab.input = null; if (inpE.onClose) { try { inpE.onClose(); } catch (e) {} } return; }   // cancel + release listener
     if (key === "enter") {
-      // complete the paste live (no suspend) so the flow stays inside the chrome
-      var inp = tab.input, buf = tab.inputBuf || ""; tab.input = null;
-      Promise.resolve(inp.complete(buf)).then(function (a) { if (inp.onClose) { try { inp.onClose(); } catch (e) {} } applyAction(a, tuiApi); if (tuiApi.refresh) tuiApi.refresh(); }).catch(function (e) { try { tuiApi.flash(String(e && e.message || e)); } catch (x) {} if (tuiApi.refresh) tuiApi.refresh(); });
+      // run complete() live (no suspend) and keep the field showing progress until it
+      // resolves — closing instantly made the account appear ~15s later with no feedback
+      var inp = tab.input, buf = tab.inputBuf || ""; inp.pending = true; tab.inputBuf = ""; if (tuiApi.refresh) tuiApi.refresh();
+      Promise.resolve(inp.complete(buf)).then(function (a) { if (tab.input === inp) tab.input = null; if (inp.onClose) { try { inp.onClose(); } catch (e) {} } applyAction(a, tuiApi); if (tuiApi.refresh) tuiApi.refresh(); }).catch(function (e) { if (tab.input === inp) tab.input = null; try { tuiApi.flash(String(e && e.message || e)); } catch (x) {} if (tuiApi.refresh) tuiApi.refresh(); });
       return;
     }
     if (key === "backspace") { tab.inputBuf = (tab.inputBuf || "").slice(0, -1); return; }
