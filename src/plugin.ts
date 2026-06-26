@@ -2,6 +2,14 @@ import { existsSync, writeFileSync, mkdirSync, readFileSync, appendFileSync } fr
 import { join, dirname } from "path";
 import { homedir } from "os";
 import { fileURLToPath, pathToFileURL } from "url";
+// @ts-ignore — generated bundle, no .d.ts
+import { maybeRunCli, deployLoaderCommands } from "./commands.js";
+
+// Slash-command invocations shell in as `node <this file> <action>`; handle them
+// first and exit, so command/config runs never go through plugin activation.
+if (await maybeRunCli(getAppConfigDir())) {
+  process.exit(0);
+}
 
 const START_TIME = new Date().toISOString().replace(/:/g, "-").split(".")[0];
 
@@ -87,6 +95,11 @@ function installOcWrapper(configDir: string) {
   // resolved at every oc invocation, not at install time, so the wrapper
   // works as soon as any copy of the TUI exists and never goes stale
   const tuiCandidates = [
+    // core-loader is the post-rename location; the bare "core" paths remain as
+    // fallbacks so already-deployed (pre-rename) installs keep resolving the TUI.
+    join(pluginDir, "..", "core-loader", "dist", "tui.js"),
+    join(configDir, "repos", "opencode-loader", "core-loader", "dist", "tui.js"),
+    join(homedir(), ".cache", "opencode", "packages", "opencode-loader@latest", "node_modules", "opencode-loader", "core-loader", "dist", "tui.js"),
     join(pluginDir, "..", "core", "dist", "tui.js"),
     join(configDir, "repos", "opencode-loader", "core", "dist", "tui.js"),
     join(homedir(), ".cache", "opencode", "packages", "opencode-loader@latest", "node_modules", "opencode-loader", "core", "dist", "tui.js"),
@@ -175,6 +188,12 @@ export async function activate() {
     installOcWrapper(configDir);
   } catch (e) {
     writeLog(configDir, "Failed to install oc wrapper: " + e, true);
+  }
+
+  try {
+    deployLoaderCommands(configDir);
+  } catch (e) {
+    writeLog(configDir, "Failed to deploy loader commands: " + e, true);
   }
 
   writeLog(configDir, "OpenCode Loader activation complete");
