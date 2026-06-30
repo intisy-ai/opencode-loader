@@ -11,7 +11,7 @@ import { homedir } from "os";
 function configDir() { return process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode"); }
 function reposDir() { return join(configDir(), "repos"); }
 function readJSON(p, fallback) { try { return JSON.parse(readFileSync(p, "utf8")); } catch (e) { return fallback; } }
-function modelsCache() { return readJSON(join(configDir(), "config", "core-auth-models.json"), {}); }
+function modelsCache() { const d = join(configDir(), "config"); return readJSON(join(d, "models.json"), null) || readJSON(join(d, "core-auth-models.json"), {}); }
 function opencodeConfigPath() { return join(configDir(), existsSync(join(configDir(), "opencode.jsonc")) ? "opencode.jsonc" : "opencode.json"); }
 function modelCount(pid) { var c = readJSON(opencodeConfigPath(), {}); return Object.keys((c.provider && c.provider[pid] && c.provider[pid].models) || {}).length; }
 
