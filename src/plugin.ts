@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 // @ts-ignore — generated bundle, no .d.ts
 import { maybeRunCli, deployLoaderCommands } from "./commands.js";
 // @ts-ignore — generated bundle, no .d.ts
-import { makeWriteLog, defineConfig } from "../core/dist/index.js";
+import { makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli } from "../core/dist/index.js";
 
 // Slash-command invocations shell in as `node <this file> <action>`; handle them
 // first and exit, so command/config runs never go through plugin activation.
@@ -18,6 +18,107 @@ defineConfig("opencode-loader", {
   catalog_cache_hours: 6,
   default_tab: "projects",
 });
+
+defineReadme({
+  description:
+    "TUI launcher and `oc` shell command for [OpenCode](https://github.com/sst/opencode). When loaded as an OpenCode plugin it installs an `oc` command into your shell; running `oc` opens an interactive TUI for switching between projects, managing plugins, and signing in to providers. It also drives [plugin-updater](https://github.com/intisy-ai/plugin-updater) on startup so all your git-based plugins stay current.",
+  architecture: `flowchart TD
+    START[OpenCode startup] -->|activate| PLUGIN[plugin.js]
+    PLUGIN -->|earlyLaunch| UPDATER[plugin-updater]
+    PLUGIN -->|install| OCBIN["oc / oc.cmd in ~/.local/bin"]
+    PLUGIN -->|deployCommands| CMDS["/opencode-loader-config, /plugins, /accounts"]
+    OCBIN -->|run oc| TUI["core-loader TUI (bun run tui.js)"]
+    TUI --> PROJ[Projects tab]
+    TUI --> PLUG[Plugins tab]
+    TUI --> PROV[Providers tab — tui-extension.js]
+    PROV --> COREAUTH[(core-auth account store)]`,
+  structure: {
+    src: [
+      "`plugin.ts` — the OpenCode plugin entry (`activate`/`cleanup`); installs the `oc` wrapper, runs plugin-updater, deploys commands. Also acts as the command CLI (`node plugin.js <config|plugins|accounts>`).",
+      "`tui-extension.ts` — the loader's custom Providers tab (auto-discovers installed providers).",
+      "`commands.ts` — cross-app slash-command definitions + their CLI actions.",
+      "`core-loader/` — git submodule ([`intisy-ai/core-loader`](https://github.com/intisy-ai/core-loader)): the TUI engine (`core-loader/dist/tui.js`), built and bundled at publish time.",
+      "`core/` — git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)): shared config + the cross-app command framework, bundled to `core/dist/index.js`.",
+    ],
+    dist: ["compiled output (generated; not committed)."],
+  },
+  dependencies: ["core-loader", "core", "plugin-updater", "Bun"],
+  extraSections: [
+    {
+      id: "requirements",
+      title: "Requirements",
+      after: "structure",
+      body: "- [Bun](https://bun.sh/) runtime (the TUI uses `bun:sqlite` to read the OpenCode session database).",
+    },
+    {
+      id: "loader-install-detail",
+      title: "Plugin-updater entry",
+      after: "installation",
+      body: [
+        "When using plugin-updater, add this entry to `~/.config/opencode/config/plugins.json`:",
+        "",
+        "```json",
+        '{ "name": "opencode-loader", "url": "https://github.com/intisy-ai/opencode-loader", "enabled": true, "autoUpdate": true }',
+        "```",
+        "Restart OpenCode — the updater clones, builds (including the submodules), and loads it.",
+        "",
+        "When using npm directly, add to `~/.config/opencode/opencode.json`:",
+        "",
+        "```jsonc",
+        '{ "plugins": ["opencode-loader@latest"] }',
+        "```",
+      ].join("\n"),
+    },
+    {
+      id: "usage",
+      title: "Usage",
+      after: "loader-install-detail",
+      body: [
+        "```bash",
+        "oc              # Launch the TUI",
+        "oc 3            # Open project #3 directly",
+        "oc myproject    # Open the first project matching \"myproject\"",
+        "```",
+        "",
+        "### Keyboard shortcuts",
+        "",
+        "| Key | Projects tab | Plugins tab |",
+        "|-----|--------------|-------------|",
+        "| ↑↓ / W S | Navigate | Navigate |",
+        "| Enter | Open action menu | Open action menu |",
+        "| O | Open project | — |",
+        "| P | Pin/Unpin | — |",
+        "| H / U | Hide / Unhide all | — |",
+        "| F | — | Fetch remote updates |",
+        "| A | — | Toggle auto-update |",
+        "| ← → | Switch tabs | Switch tabs |",
+        "| Q | Quit | Quit |",
+      ].join("\n"),
+    },
+    {
+      id: "commands-loader",
+      title: "Commands",
+      after: "usage",
+      body: [
+        "Deployed automatically on activation to both apps' command directories (`~/.config/opencode/command/` and `~/.claude/commands/`):",
+        "",
+        "| Command | Description |",
+        "| --- | --- |",
+        "| `/opencode-loader-config` | View/change loader config (`opencode-loader.json`): `list`, `get <key>`, `set <key> <value>`. 100% of the config is reachable here. |",
+        "| `/plugins` | List the loader-managed plugins and their state (from `plugins.json`). |",
+        "| `/accounts` | List signed-in accounts across all providers (from the core-auth store). |",
+      ].join("\n"),
+    },
+    {
+      id: "config-extra",
+      title: "Configuration (extra)",
+      after: "configuration",
+      body: "The TUI also stores its own settings in `config/oc-config.json` and the plugin list in `config/plugins.json`.",
+    },
+  ],
+});
+
+if (maybeRunReadmeCli("opencode-loader")) process.exit(0);
 
 if (await maybeRunCli(getAppConfigDir())) {
   process.exit(0);

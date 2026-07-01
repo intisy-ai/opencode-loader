@@ -11,4 +11,5 @@ runPluginContract({
   commands: ["opencode-loader-config", "plugins", "accounts"],
   deploy: { module: "dist/commands.js", fn: "deployLoaderCommands", arg: "opencode" },
   actions: [["plugins"], ["accounts"]],
+  readme: true,
 });

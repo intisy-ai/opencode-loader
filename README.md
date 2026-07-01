@@ -2,8 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/opencode-loader)](https://www.npmjs.com/package/opencode-loader)
 [![npm downloads](https://img.shields.io/npm/dm/opencode-loader)](https://www.npmjs.com/package/opencode-loader)
-[![CI](https://github.com/intisy-ai/opencode-loader/actions/workflows/publish.yml/badge.svg)](https://github.com/intisy-ai/opencode-loader/actions/workflows/publish.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/intisy-ai/opencode-loader/publish.yml)](https://github.com/intisy-ai/opencode-loader/actions)
 
 TUI launcher and `oc` shell command for [OpenCode](https://github.com/sst/opencode). When loaded as an OpenCode plugin it installs an `oc` command into your shell; running `oc` opens an interactive TUI for switching between projects, managing plugins, and signing in to providers. It also drives [plugin-updater](https://github.com/intisy-ai/plugin-updater) on startup so all your git-based plugins stay current.
 
@@ -24,12 +23,14 @@ flowchart TD
 
 ## Structure
 
-- `src/plugin.ts` — the OpenCode plugin entry (`activate`/`cleanup`); installs the `oc` wrapper, runs plugin-updater, deploys commands. Also acts as the command CLI (`node plugin.js <config|plugins|accounts>`).
-- `src/tui-extension.ts` — the loader's custom Providers tab (auto-discovers installed providers).
-- `src/commands.ts` — cross-app slash-command definitions + their CLI actions.
-- `core-loader/` — git submodule ([`intisy-ai/core-loader`](https://github.com/intisy-ai/core-loader)): the TUI engine (`core-loader/dist/tui.js`), built and bundled at publish time.
-- `core/` — git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)): shared config + the cross-app command framework, bundled to `core/dist/index.js`.
-- `dist/` — compiled output (generated; not committed).
+- `src/`
+  - `plugin.ts` — the OpenCode plugin entry (`activate`/`cleanup`); installs the `oc` wrapper, runs plugin-updater, deploys commands. Also acts as the command CLI (`node plugin.js <config|plugins|accounts>`).
+  - `tui-extension.ts` — the loader's custom Providers tab (auto-discovers installed providers).
+  - `commands.ts` — cross-app slash-command definitions + their CLI actions.
+  - `core-loader/` — git submodule ([`intisy-ai/core-loader`](https://github.com/intisy-ai/core-loader)): the TUI engine (`core-loader/dist/tui.js`), built and bundled at publish time.
+  - `core/` — git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)): shared config + the cross-app command framework, bundled to `core/dist/index.js`.
+- `dist/`
+  - compiled output (generated; not committed).
 
 ## Requirements
 
@@ -38,14 +39,28 @@ flowchart TD
 ## Installation
 
 ### Via plugin-updater (recommended)
-Add to `~/.config/opencode/config/plugins.json`:
+
+```bash
+npx plugin-updater@latest init https://github.com/intisy-ai/opencode-loader
+```
+
+### Via npm
+
+```bash
+npm install opencode-loader
+```
+
+## Plugin-updater entry
+
+When using plugin-updater, add this entry to `~/.config/opencode/config/plugins.json`:
+
 ```json
 { "name": "opencode-loader", "url": "https://github.com/intisy-ai/opencode-loader", "enabled": true, "autoUpdate": true }
 ```
 Restart OpenCode — the updater clones, builds (including the submodules), and loads it.
 
-### Via npm
-Add the package to `~/.config/opencode/opencode.json`:
+When using npm directly, add to `~/.config/opencode/opencode.json`:
+
 ```jsonc
 { "plugins": ["opencode-loader@latest"] }
 ```
@@ -84,27 +99,45 @@ Deployed automatically on activation to both apps' command directories (`~/.conf
 
 ## Configuration
 
-> Config files are **never auto-created on launch** — settings are registered with defaults (core `defineConfig`) and edited in the loader's **Plugins → Configure** screen (or `/<plugin>-config`); a file is written only when you change a value. **Global console logging** for every plugin is toggled in `config/settings.json` (`logConsole: true`, the opencode.json-equivalent).
+Config file: `<configDir>/config/opencode-loader.json` (edit via the loader or `/opencode-loader-config set`).
 
-Config file: `~/.config/opencode/config/opencode-loader.json` (preferred) or `~/.config/opencode/opencode-loader.json` (fallback).
+```json
+{
+  "logging": true,
+  "auto_update_check": true,
+  "update_check_delay_ms": 1500,
+  "update_check_interval_hours": 24,
+  "catalog_cache_hours": 6,
+  "default_tab": "projects"
+}
+```
 
-| Key | Type | Default | Description |
-| --- | --- | --- | --- |
-| `logging` | boolean | `true` | Write a per-session log file. Set `false` to disable. |
+| Key | Default |
+| --- | --- |
+| `logging` | `true` |
+| `auto_update_check` | `true` |
+| `update_check_delay_ms` | `1500` |
+| `update_check_interval_hours` | `24` |
+| `catalog_cache_hours` | `6` |
+| `default_tab` | `"projects"` |
+
+## Configuration (extra)
 
 The TUI also stores its own settings in `config/oc-config.json` and the plugin list in `config/plugins.json`.
 
 ## Dependencies
 
-- **`core-loader`** (required) — bundled git submodule providing the TUI engine.
-- **`core`** (required) — bundled git submodule (config + command framework).
-- **`plugin-updater`** (recommended) — run on startup to keep git-based plugins updated; absent, the loader skips updates.
-- **Bun** (required) — runtime for the TUI.
+- `core-loader`
+- `core`
+- `plugin-updater`
+- `Bun`
 
 ## Logging
 
-Logs to `~/.config/opencode/logs/YYYY-MM-DD/opencode-loader-HH-MM-SS.log`. Set `"logging": false` in config to disable.
+Logs are written to `<configDir>/logs/YYYY-MM-DD/opencode-loader-HH-MM-SS.log` and are toggled by
+this plugin's `logging` config (default on). Console mirroring is global, off by default,
+and controlled by the shared `config/settings.json` `logConsole` flag.
 
 ## License
 
-MIT
+MIT.
