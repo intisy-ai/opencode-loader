@@ -208,6 +208,7 @@ function installOcWrapper(configDir: string) {
     join(configDir, "repos", "opencode-loader", "core", "dist", "tui.js"),
     join(homedir(), ".cache", "opencode", "packages", "opencode-loader@latest", "node_modules", "opencode-loader", "core", "dist", "tui.js"),
   ];
+  const cliCandidates = tuiCandidates.map((p) => p.replace(/tui\.js$/, "cli.js"));
   // the loader's own custom Providers tab (auto-discovers all installed providers)
   const extPath = join(configDir, "repos", "opencode-loader", "dist", "tui-extension.js");
   writeLog(configDir, "Installing oc wrapper with runtime TUI resolution");
@@ -215,6 +216,9 @@ function installOcWrapper(configDir: string) {
   if (process.platform === "win32") {
     const cmdPath = join(binDir, "oc.cmd");
     const cmdLines = ["@echo off", "setlocal", `set "HUB_TUI_EXTENSION=${extPath}"`, 'set "HUB_CONFIG_DIR=%USERPROFILE%\\.config\\opencode"'];
+    cmdLines.push('set "_iscli="');
+    for (const sub of ["plugins", "providers", "proxy", "doctor"]) cmdLines.push(`if "%1"=="${sub}" set "_iscli=1"`);
+    for (const candidate of cliCandidates) cmdLines.push(`if defined _iscli if exist "${candidate}" ( node "${candidate}" %* & exit /b %errorlevel% )`);
     for (const candidate of tuiCandidates) {
       cmdLines.push(`if exist "${candidate}" ( bun run "${candidate}" %* & exit /b %errorlevel% )`);
     }
@@ -236,6 +240,14 @@ function installOcWrapper(configDir: string) {
         `  "${candidate}"${index < tuiCandidates.length - 1 ? " \\" : "; do"}`),
       '  if [ -f "$candidate" ]; then TUI="$candidate"; break; fi',
       "done",
+      'case "$1" in',
+      '  plugins|providers|proxy|doctor)',
+      "    for c in \\",
+      ...cliCandidates.map((candidate, index) =>
+        `      "${candidate}"${index < cliCandidates.length - 1 ? " \\" : "; do"}`),
+      '      if [ -f "$c" ] && command -v node >/dev/null 2>&1; then exec node "$c" "$@"; fi',
+      "    done ;;",
+      "esac",
       'if [ -z "$TUI" ] || ! command -v bun >/dev/null 2>&1; then exec opencode "$@"; fi',
       'export OC_OUTPUT="${TEMP:-${TMPDIR:-/tmp}}/oc-dir-$$.txt"',
       'bun run "$TUI" "$@"',
