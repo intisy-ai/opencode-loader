@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 // @ts-ignore — generated bundle, no .d.ts
 import { maybeRunCli, deployLoaderCommands } from "./commands.js";
 // @ts-ignore — generated bundle, no .d.ts
-import { getBinDir, runEarlyLaunchHooks } from "../core-loader/dist/loader-runtime.js";
+import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "../core-loader/dist/loader-runtime.js";
 // @ts-ignore — generated bundle, no .d.ts
 import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli } from "../core/dist/index.js";
 
@@ -135,6 +135,7 @@ function writeLog(configDir: string, message: string, isError: boolean = false) 
 function installOcWrapper(configDir: string) {
   const binDir = getBinDir();
   if (!existsSync(binDir)) try { mkdirSync(binDir, { recursive: true }); } catch {}
+  ensureOnPath(binDir, (m) => writeLog(configDir, m));
 
   const pluginDir = dirname(fileURLToPath(import.meta.url));
   // resolved at every oc invocation, not at install time, so the wrapper
@@ -169,7 +170,7 @@ function installOcWrapper(configDir: string) {
   } else {
     const shPath = join(binDir, "oc");
     const lines = [
-      "#!/usr/bin/env bash",
+      "#!/bin/sh",
       'export PATH="$HOME/.bun/bin:$PATH"',
       `export HUB_TUI_EXTENSION="${extPath}"`,
       // tell core-auth (loaded via each provider's handler) which app home we're in, so
