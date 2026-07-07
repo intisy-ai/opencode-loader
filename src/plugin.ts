@@ -29,7 +29,7 @@ defineReadme({
     PLUGIN -->|earlyLaunch| UPDATER[plugin-updater]
     PLUGIN -->|install| OCBIN["oc / oc.cmd in ~/.local/bin"]
     PLUGIN -->|deployCommands| CMDS["/opencode-loader-config, /plugins, /accounts"]
-    OCBIN -->|run oc| TUI["core-loader TUI (bun run tui.js)"]
+    OCBIN -->|run oc| TUI["core-loader TUI (node tui.js)"]
     TUI --> PROJ[Projects tab]
     TUI --> PLUG[Plugins tab]
     TUI --> PROV[Providers tab — tui-extension.js]
@@ -50,7 +50,7 @@ defineReadme({
       id: "requirements",
       title: "Requirements",
       after: "structure",
-      body: "- [Bun](https://bun.sh/) runtime (the TUI uses `bun:sqlite` to read the OpenCode session database).",
+      body: "- Node.js 20+ (the TUI runs under Node — no Bun required; it reads the OpenCode session DB via Node 22+'s built-in `node:sqlite`, falling back to `bun:sqlite` when run under Bun).",
     },
     {
       id: "loader-install-detail",
@@ -162,7 +162,7 @@ function installOcWrapper(configDir: string) {
     for (const sub of ["plugins", "providers", "proxy", "doctor"]) cmdLines.push(`if "%1"=="${sub}" set "_iscli=1"`);
     for (const candidate of cliCandidates) cmdLines.push(`if defined _iscli if exist "${candidate}" ( node "${candidate}" %* & exit /b %errorlevel% )`);
     for (const candidate of tuiCandidates) {
-      cmdLines.push(`if exist "${candidate}" ( bun run "${candidate}" %* & exit /b %errorlevel% )`);
+      cmdLines.push(`if exist "${candidate}" ( node "${candidate}" %* & exit /b %errorlevel% )`);
     }
     cmdLines.push("opencode %*");
     writeFileSync(cmdPath, cmdLines.join("\r\n") + "\r\n", "utf-8");
@@ -190,9 +190,9 @@ function installOcWrapper(configDir: string) {
       '      if [ -f "$c" ] && command -v node >/dev/null 2>&1; then exec node "$c" "$@"; fi',
       "    done ;;",
       "esac",
-      'if [ -z "$TUI" ] || ! command -v bun >/dev/null 2>&1; then exec opencode "$@"; fi',
+      'if [ -z "$TUI" ] || ! command -v node >/dev/null 2>&1; then exec opencode "$@"; fi',
       'export OC_OUTPUT="${TEMP:-${TMPDIR:-/tmp}}/oc-dir-$$.txt"',
-      'bun run "$TUI" "$@"',
+      'node "$TUI" "$@"',
       "EXIT=$?",
       'if [ $EXIT -eq 42 ]; then',
       '  rm -f "$OC_OUTPUT"',

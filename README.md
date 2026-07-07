@@ -14,7 +14,7 @@ flowchart TD
     PLUGIN -->|earlyLaunch| UPDATER[plugin-updater]
     PLUGIN -->|install| OCBIN["oc / oc.cmd in ~/.local/bin"]
     PLUGIN -->|deployCommands| CMDS["/opencode-loader-config, /plugins, /accounts"]
-    OCBIN -->|run oc| TUI["core-loader TUI (bun run tui.js)"]
+    OCBIN -->|run oc| TUI["core-loader TUI (node tui.js)"]
     TUI --> PROJ[Projects tab]
     TUI --> PLUG[Plugins tab]
     TUI --> PROV[Providers tab — tui-extension.js]
@@ -34,7 +34,7 @@ flowchart TD
 
 ## Requirements
 
-- [Bun](https://bun.sh/) runtime (the TUI uses `bun:sqlite` to read the OpenCode session database).
+- Node.js 20+ (the TUI runs under Node — no Bun required; it reads the OpenCode session DB via Node 22+'s built-in `node:sqlite`, falling back to `bun:sqlite` when run under Bun).
 
 ## Installation
 
