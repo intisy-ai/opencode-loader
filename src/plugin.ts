@@ -1,9 +1,11 @@
-import { existsSync, writeFileSync, mkdirSync, readFileSync } from "fs";
+import { existsSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
-import { fileURLToPath, pathToFileURL } from "url";
+import { fileURLToPath } from "url";
 // @ts-ignore — generated bundle, no .d.ts
 import { maybeRunCli, deployLoaderCommands } from "./commands.js";
+// @ts-ignore — generated bundle, no .d.ts
+import { getBinDir, runEarlyLaunchHooks } from "../core-loader/dist/loader-runtime.js";
 // @ts-ignore — generated bundle, no .d.ts
 import { makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli } from "../core/dist/index.js";
 
@@ -136,43 +138,6 @@ function getAppConfigDir() {
   return existsSync(directPath) ? directPath : configPath;
 }
 
-// Resolve plugin-updater: bare specifier first, then known install locations.
-async function loadUpdater(): Promise<any> {
-  try {
-    return await import("plugin-updater");
-  } catch {
-    // opencode installs npm plugins into its package cache, off the deployed
-    // plugin's resolution path; this candidate is simply absent under Claude.
-    const candidates = [
-      join(homedir(), ".cache", "opencode", "packages", "plugin-updater@latest", "node_modules", "plugin-updater", "dist", "index.js"),
-    ];
-    for (const candidate of candidates) {
-      if (existsSync(candidate)) return await import(pathToFileURL(candidate).href);
-    }
-    throw new Error("plugin-updater not resolvable");
-  }
-}
-
-async function runEarlyLaunchHooks(configDir: string) {
-  if (process.env.PLUGIN_UPDATER_ACTIVATION === "1") {
-    writeLog(configDir, "Updates driven by plugin-updater (activation context), skipping earlyLaunch");
-    return;
-  }
-  try {
-    const updater: any = await loadUpdater();
-    const gitPlugins = updater.getPlugins(configDir);
-    writeLog(configDir, "Running plugin-updater earlyLaunch for " + gitPlugins.length + " plugins");
-    await updater.earlyLaunch(configDir, gitPlugins);
-    writeLog(configDir, "plugin-updater earlyLaunch complete");
-  } catch (e) {
-    writeLog(configDir, "plugin-updater not available, skipping updates: " + e);
-  }
-}
-
-function getBinDir() {
-  return join(homedir(), ".local", "bin");
-}
-
 function installOcWrapper(configDir: string) {
   const binDir = getBinDir();
   if (!existsSync(binDir)) try { mkdirSync(binDir, { recursive: true }); } catch {}
@@ -282,7 +247,7 @@ export async function activate() {
   writeLog(configDir, "OpenCode Loader activating");
 
   try {
-    await runEarlyLaunchHooks(configDir);
+    await runEarlyLaunchHooks(configDir, (m) => writeLog(configDir, m));
   } catch (e) {
     writeLog(configDir, "Failed during earlyLaunch hooks: " + e, true);
   }
