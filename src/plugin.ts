@@ -216,25 +216,14 @@ function installOcWrapper(configDir: string) {
 
 export async function cleanup(configDir?: string) {
   // opencode invokes every exported function as a plugin hook, passing a context
-  // object — return an inert plugin instance then, and only clean up when
-  // plugin-updater calls us with an explicit configDir string
+  // object — return an inert plugin instance in that case.
   if (typeof configDir !== "string") return {};
-  const resolvedConfigDir = configDir;
-  const binDir = getBinDir();
-  const filesToRemove = [join(binDir, "oc"), join(binDir, "oc.cmd")];
-  for (const f of filesToRemove) {
-    try {
-      if (existsSync(f)) {
-        const { unlinkSync } = await import("fs");
-        unlinkSync(f);
-        writeLog(resolvedConfigDir, "cleanup: removed " + f);
-      }
-    } catch (e) {
-      // already gone (race / broken symlink) is the desired end state, not an error
-      if (e && e.code === "ENOENT") continue;
-      writeLog(resolvedConfigDir, "cleanup: failed to remove " + f + ": " + e, true);
-    }
-  }
+  // Intentionally does NOT remove the oc wrapper. plugin-updater calls cleanup()
+  // before EVERY redeploy; if the earlyLaunch process is killed after the copy but
+  // before activate() re-installs the wrapper, removing it here would leave the user
+  // with no `oc` command. activate() rewrites the wrapper idempotently, and the
+  // existing wrapper targets stable repo paths so it keeps working across updates.
+  return {};
 }
 
 export async function activate() {
