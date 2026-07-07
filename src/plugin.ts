@@ -7,7 +7,7 @@ import { maybeRunCli, deployLoaderCommands } from "./commands.js";
 // @ts-ignore — generated bundle, no .d.ts
 import { getBinDir, runEarlyLaunchHooks } from "../core-loader/dist/loader-runtime.js";
 // @ts-ignore — generated bundle, no .d.ts
-import { makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli } from "../core/dist/index.js";
+import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli } from "../core/dist/index.js";
 
 // Slash-command invocations shell in as `node <this file> <action>`; handle them
 // first and exit, so command/config runs never go through plugin activation.
@@ -131,12 +131,6 @@ function writeLog(configDir: string, message: string, isError: boolean = false) 
   makeWriteLog("opencode-loader", configDir)(message, isError);
 }
 
-function getAppConfigDir() {
-  const home = homedir();
-  const directPath = join(home, ".opencode");
-  const configPath = join(home, ".config", "opencode");
-  return existsSync(directPath) ? directPath : configPath;
-}
 
 function installOcWrapper(configDir: string) {
   const binDir = getBinDir();
