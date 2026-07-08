@@ -8,6 +8,7 @@ import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { createAccountMenu } from "../core-loader/dist/account-menu.js";
+import * as caps from "./opencode-caps.js";
 
 function configDir() { return process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode"); }
 function reposDir() { return join(configDir(), "repos"); }
@@ -60,4 +61,12 @@ function handleKey(key, state, tuiApi) {
 
 export default function (tuiApi) {
   tuiApi.registerTab({ id: "providers", label: "Providers", render: render, handleKey: handleKey });
+  // Register ONLY opencode's MCP-server capability (see src/opencode-caps.ts) —
+  // opencode has its own session UI and no plugin marketplace, so
+  // listSessions/foreignPlugins/marketplaces stay unregistered here (their
+  // core-loader UI sections are then simply absent under this loader).
+  // Guarded: an older/unbumped core-loader submodule may not carry registerCapabilities yet.
+  if (typeof tuiApi.registerCapabilities === "function") {
+    tuiApi.registerCapabilities({ mcpServers: caps.mcpServers, addMcpServer: caps.addMcpServer });
+  }
 }
