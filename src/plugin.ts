@@ -8,17 +8,23 @@ import { maybeRunCli, deployLoaderCommands } from "./commands.js";
 import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "../core-loader/dist/loader-runtime.js";
 // @ts-ignore — generated bundle, no .d.ts
 import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli } from "../core/dist/index.js";
+// @ts-ignore — generated bundle, no .d.ts
+import { ensureProxy } from "./proxy-boot.js";
 
 // Slash-command invocations shell in as `node <this file> <action>`; handle them
 // first and exit, so command/config runs never go through plugin activation.
 // Register config defaults BEFORE the CLI guard so `config schema` sees them (no write).
-defineConfig("opencode-loader", {
+// use_proxy is opt-in (default false): OpenCode routes in-process by default; when
+// enabled, requests are forwarded to a local opencode-proxy daemon on proxy_port.
+const LOADER_CONFIG = defineConfig("opencode-loader", {
   logging: true,
   auto_update_check: true,
   update_check_delay_ms: 1500,
   update_check_interval_hours: 24,
   catalog_cache_hours: 6,
   default_tab: "projects",
+  use_proxy: false,
+  proxy_port: 34568,
 });
 
 defineReadme({
@@ -246,6 +252,14 @@ export async function activate() {
     deployLoaderCommands(configDir);
   } catch (e) {
     writeLog(configDir, "Failed to deploy loader commands: " + e, true);
+  }
+
+  // Opt-in only: no-op unless config use_proxy=true. Runs in the OpenCode process,
+  // so the env it sets is visible to core-auth's loader.fetch in the same process.
+  try {
+    await ensureProxy(LOADER_CONFIG, (m) => writeLog(configDir, m));
+  } catch (e) {
+    writeLog(configDir, "Failed to ensure opencode proxy: " + e, true);
   }
 
   writeLog(configDir, "OpenCode Loader activation complete");

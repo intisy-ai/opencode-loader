@@ -108,7 +108,9 @@ Config file: `<configDir>/config/opencode-loader.json` (edit via the loader or `
   "update_check_delay_ms": 1500,
   "update_check_interval_hours": 24,
   "catalog_cache_hours": 6,
-  "default_tab": "projects"
+  "default_tab": "projects",
+  "use_proxy": false,
+  "proxy_port": 34568
 }
 ```
 
@@ -120,6 +122,8 @@ Config file: `<configDir>/config/opencode-loader.json` (edit via the loader or `
 | `update_check_interval_hours` | `24` |
 | `catalog_cache_hours` | `6` |
 | `default_tab` | `"projects"` |
+| `use_proxy` | `false` |
+| `proxy_port` | `34568` |
 
 ## Configuration (extra)
 
