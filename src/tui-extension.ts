@@ -61,7 +61,7 @@ function handleKey(key, state, tuiApi) {
 
 export default function (tuiApi) {
   tuiApi.registerTab({ id: "providers", label: "Providers", render: render, handleKey: handleKey });
-  // Register ONLY opencode's MCP-server capability (see src/opencode-caps.ts) —
+  // Register ONLY opencode's MCP-server capability (see src/opencode-caps.ts):
   // opencode has its own session UI and no plugin marketplace, so
   // listSessions/foreignPlugins/marketplaces stay unregistered here (their
   // core-loader UI sections are then simply absent under this loader).

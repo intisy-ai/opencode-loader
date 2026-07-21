@@ -2,13 +2,13 @@ import { existsSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
 import { fileURLToPath } from "url";
-// @ts-ignore — generated bundle, no .d.ts
+// @ts-ignore: generated bundle, no .d.ts
 import { maybeRunCli, deployLoaderCommands } from "./commands.js";
-// @ts-ignore — generated bundle, no .d.ts
+// @ts-ignore: generated bundle, no .d.ts
 import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "../core-loader/dist/loader-runtime.js";
-// @ts-ignore — generated bundle, no .d.ts
+// @ts-ignore: generated bundle, no .d.ts
 import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli } from "../core/dist/index.js";
-// @ts-ignore — generated bundle, no .d.ts
+// @ts-ignore: generated bundle, no .d.ts
 import { ensureProxy } from "./proxy-boot.js";
 
 // Slash-command invocations shell in as `node <this file> <action>`; handle them
@@ -147,8 +147,8 @@ function installOcWrapper(configDir: string) {
   // resolved at every oc invocation, not at install time, so the wrapper
   // works as soon as any copy of the TUI exists and never goes stale
   const tuiCandidates = [
-    // core-loader is the post-rename location; the bare "core" paths remain as
-    // fallbacks so already-deployed (pre-rename) installs keep resolving the TUI.
+    // core-loader is the primary location; the bare "core" paths are kept as
+    // fallbacks for installs whose TUI still lives there.
     join(pluginDir, "..", "core-loader", "dist", "tui.js"),
     join(configDir, "repos", "opencode-loader", "core-loader", "dist", "tui.js"),
     join(homedir(), ".cache", "opencode", "packages", "opencode-loader@latest", "node_modules", "opencode-loader", "core-loader", "dist", "tui.js"),
@@ -222,7 +222,7 @@ function installOcWrapper(configDir: string) {
 
 export async function cleanup(configDir?: string) {
   // opencode invokes every exported function as a plugin hook, passing a context
-  // object — return an inert plugin instance in that case.
+  // object; return an inert plugin instance in that case.
   if (typeof configDir !== "string") return {};
   // Intentionally does NOT remove the oc wrapper. plugin-updater calls cleanup()
   // before EVERY redeploy; if the earlyLaunch process is killed after the copy but

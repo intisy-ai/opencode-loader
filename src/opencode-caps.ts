@@ -1,7 +1,7 @@
 // @ts-nocheck
 // opencode adapter for core-loader's app-capability contract (see
 // libs/core-loader "S.capabilities" / tuiApi.registerCapabilities). opencode
-// registers ONLY the MCP subset here — it has its own in-app session UI and no
+// registers ONLY the MCP subset here: it has its own in-app session UI and no
 // plugin marketplace, so listSessions/foreignPlugins/marketplaces/addMarketplace
 // are intentionally never registered for this loader.
 //
@@ -10,7 +10,7 @@
 //   (HUB_CONFIG_DIR overrides the ~/.config/opencode root, same as tui-extension.ts).
 // That file is JSONC (supports // and /* */ comments), so reads strip comments
 // before parsing; writes go through JSON.stringify (comments are lost on rewrite,
-// matching repo convention — the DATA is what must be preserved).
+// matching repo convention: the DATA is what must be preserved).
 // Shape (opencode's own config.json schema, https://opencode.ai/config.json):
 //   { "mcp": { "<name>": { "type": "local", "command": [...], "environment"?: {},
 //                            "cwd"?: "...", "timeout"?: n, "enabled"?: bool }
@@ -74,7 +74,7 @@ export function mcpServers() {
   } catch (e) { return []; }
 }
 
-// JSON read-modify-write into opencode's own config file — no CLI dependency.
+// JSON read-modify-write into opencode's own config file; no CLI dependency.
 // http -> {type:"remote", url}; stdio -> {type:"local", command:[...]}, splitting
 // a plain "cmd arg1 arg2" target string (quote-aware) into the command array.
 // CRITICAL: opencode.jsonc may contain comments and the user's entire

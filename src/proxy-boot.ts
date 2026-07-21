@@ -41,7 +41,7 @@ function sleep(ms) {
 
 // Turns on same-process proxy routing: core-auth's loader.fetch (same process)
 // reads these per request, so setting them makes it forward to the daemon. Only
-// called once a daemon is actually listening or has just been spawned — never
+// called once a daemon is actually listening or has just been spawned, never
 // while there is nothing behind the port (that would break every request).
 function markProxyEnv(port) {
   process.env.HUB_OC_PROXY = "1";
@@ -49,7 +49,7 @@ function markProxyEnv(port) {
 }
 
 // Applies the opt-in proxy toggle. Returns the resolved state; never throws (a
-// proxy setup failure must not break OpenCode startup — it just degrades to
+// proxy setup failure must not break OpenCode startup, it just degrades to
 // in-process routing, which is the default anyway).
 export async function ensureProxy(config, log) {
   const { enabled, port } = resolveProxyToggle(config);
@@ -75,7 +75,7 @@ export async function ensureProxy(config, log) {
     env: { ...process.env, HUB_PROXY_PORT: String(port) },
   });
   // A spawn failure (EACCES/EPERM/AV) surfaces asynchronously via 'error'; with no
-  // listener Node throws and crashes the whole OpenCode process — swallow it.
+  // listener Node throws and crashes the whole OpenCode process, so swallow it.
   child.on("error", (e) => log("opencode proxy daemon spawn error: " + e));
   child.unref();
   markProxyEnv(port);
