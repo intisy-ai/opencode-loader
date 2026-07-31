@@ -18,6 +18,8 @@
   ],
   "files": [
     "dist/",
+    "cairn.json",
+    "icon.svg",
     "core-loader/dist/",
     "core/dist/",
     "opencode-proxy/dist/",
