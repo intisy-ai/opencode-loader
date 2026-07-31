@@ -8,6 +8,7 @@ import { maybeRunCli, deployLoaderCommands } from "./commands.js";
 import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "../core-loader/dist/loader-runtime.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli } from "../core/dist/index.js";
+import { ensureAppCli } from "./ensure-app.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { ensureProxy } from "./proxy-boot.js";
 
@@ -240,6 +241,12 @@ export async function activate() {
     await runEarlyLaunchHooks(configDir, (m) => writeLog(configDir, m));
   } catch (e) {
     writeLog(configDir, "Failed during earlyLaunch hooks: " + e, true);
+  }
+
+  try {
+    ensureAppCli({ binary: "opencode", pkg: "opencode-ai" }, (m) => writeLog(configDir, m));
+  } catch (e) {
+    writeLog(configDir, "Failed to ensure app CLI: " + e, true);
   }
 
   try {
