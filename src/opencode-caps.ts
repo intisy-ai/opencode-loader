@@ -20,11 +20,13 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import { loaderConfigDir } from "../core-loader/dist/app-home.js";
 
-function configDir() { return process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode"); }
+const APP_HOME = join(homedir(), ".config", "opencode");
+function configDir() { return loaderConfigDir(APP_HOME); }
 
-// opencode.jsonc wins over opencode.json when both exist (mirrors tui-extension.ts's opencodeConfigPath).
-function opencodeConfigPath() {
+// opencode.jsonc wins over opencode.json when both exist.
+export function opencodeConfigPath() {
   return join(configDir(), existsSync(join(configDir(), "opencode.jsonc")) ? "opencode.jsonc" : "opencode.json");
 }
 

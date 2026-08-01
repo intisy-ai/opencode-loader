@@ -7,8 +7,11 @@ import { maybeRunCli, deployLoaderCommands } from "./commands.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "../core-loader/dist/loader-runtime.js";
 // @ts-ignore: generated bundle, no .d.ts
+import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines } from "../core-loader/dist/wrapper.js";
+// @ts-ignore: generated bundle, no .d.ts
 import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli } from "../core/dist/index.js";
-import { ensureAppCli } from "./ensure-app.js";
+// @ts-ignore: generated bundle, no .d.ts
+import { ensureAppCli } from "../core-loader/dist/ensure-app.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { ensureProxy } from "./proxy-boot.js";
 
@@ -165,9 +168,7 @@ function installOcWrapper(configDir: string) {
   if (process.platform === "win32") {
     const cmdPath = join(binDir, "oc.cmd");
     const cmdLines = ["@echo off", "setlocal", `set "HUB_TUI_EXTENSION=${extPath}"`, 'set "HUB_CONFIG_DIR=%USERPROFILE%\\.config\\opencode"'];
-    cmdLines.push('set "_iscli="');
-    for (const sub of ["plugins", "providers", "proxy", "doctor"]) cmdLines.push(`if "%1"=="${sub}" set "_iscli=1"`);
-    for (const candidate of cliCandidates) cmdLines.push(`if defined _iscli if exist "${candidate}" ( node "${candidate}" %* & exit /b %errorlevel% )`);
+    cmdLines.push(...cliDispatchCmdLines(cliCandidates));
     for (const candidate of tuiCandidates) {
       cmdLines.push(`if exist "${candidate}" ( node "${candidate}" %* & exit /b %errorlevel% )`);
     }
@@ -183,20 +184,8 @@ function installOcWrapper(configDir: string) {
       // tell core-auth (loaded via each provider's handler) which app home we're in, so
       // its model refresh writes opencode.json instead of falling back to ~/.claude
       'export HUB_CONFIG_DIR="$HOME/.config/opencode"',
-      'TUI=""',
-      "for candidate in \\",
-      ...tuiCandidates.map((candidate, index) =>
-        `  "${candidate}"${index < tuiCandidates.length - 1 ? " \\" : "; do"}`),
-      '  if [ -f "$candidate" ]; then TUI="$candidate"; break; fi',
-      "done",
-      'case "$1" in',
-      '  plugins|providers|proxy|doctor)',
-      "    for c in \\",
-      ...cliCandidates.map((candidate, index) =>
-        `      "${candidate}"${index < cliCandidates.length - 1 ? " \\" : "; do"}`),
-      '      if [ -f "$c" ] && command -v node >/dev/null 2>&1; then exec node "$c" "$@"; fi',
-      "    done ;;",
-      "esac",
+      ...tuiCandidateResolveShLines(tuiCandidates),
+      ...cliDispatchShLines(cliCandidates),
       'if [ -z "$TUI" ] || ! command -v node >/dev/null 2>&1; then exec opencode "$@"; fi',
       'export OC_OUTPUT="${TEMP:-${TMPDIR:-/tmp}}/oc-dir-$$.txt"',
       'node "$TUI" "$@"',

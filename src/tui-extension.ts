@@ -4,19 +4,20 @@
 // opens that provider's account/quota menu in-tab. The menu rendering + all its
 // navigation live in core-loader's shared account-menu (also used by the Claude
 // loader); the menu MODEL lives in core-auth. This file only lists providers.
-import { existsSync, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { createAccountMenu } from "../core-loader/dist/account-menu.js";
 import { readDeployedProviders } from "../core-loader/dist/loader-runtime.js";
+import { loaderConfigDir, loaderReposDir } from "../core-loader/dist/app-home.js";
 import * as caps from "./opencode-caps.js";
 
-function configDir() { return process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode"); }
-function reposDir() { return join(configDir(), "repos"); }
+const APP_HOME = join(homedir(), ".config", "opencode");
+function configDir() { return loaderConfigDir(APP_HOME); }
+function reposDir() { return loaderReposDir(APP_HOME); }
 function readJSON(p, fallback) { try { return JSON.parse(readFileSync(p, "utf8")); } catch (e) { return fallback; } }
 function modelsCache() { const d = join(configDir(), "config"); return readJSON(join(d, "models.json"), null) || readJSON(join(d, "core-auth-models.json"), {}); }
-function opencodeConfigPath() { return join(configDir(), existsSync(join(configDir(), "opencode.jsonc")) ? "opencode.jsonc" : "opencode.json"); }
-function modelCount(pid) { var c = readJSON(opencodeConfigPath(), {}); return Object.keys((c.provider && c.provider[pid] && c.provider[pid].models) || {}).length; }
+function modelCount(pid) { var c = readJSON(caps.opencodeConfigPath(), {}); return Object.keys((c.provider && c.provider[pid] && c.provider[pid].models) || {}).length; }
 
 function providers() {
   var out = [], seen = {};
