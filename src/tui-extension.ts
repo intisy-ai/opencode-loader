@@ -4,10 +4,11 @@
 // opens that provider's account/quota menu in-tab. The menu rendering + all its
 // navigation live in core-loader's shared account-menu (also used by the Claude
 // loader); the menu MODEL lives in core-auth. This file only lists providers.
-import { existsSync, readFileSync, readdirSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { createAccountMenu } from "../core-loader/dist/account-menu.js";
+import { readDeployedProviders } from "../core-loader/dist/loader-runtime.js";
 import * as caps from "./opencode-caps.js";
 
 function configDir() { return process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode"); }
@@ -18,16 +19,11 @@ function opencodeConfigPath() { return join(configDir(), existsSync(join(configD
 function modelCount(pid) { var c = readJSON(opencodeConfigPath(), {}); return Object.keys((c.provider && c.provider[pid] && c.provider[pid].models) || {}).length; }
 
 function providers() {
-  var out = [], seen = {}, repos = [];
-  try { repos = readdirSync(reposDir()); } catch (e) {}
-  for (var i = 0; i < repos.length; i++) {
-    var pkg = readJSON(join(reposDir(), repos[i], "package.json"), null);
-    var declared = (pkg && pkg.claudeHub && pkg.claudeHub.authProviders) || (pkg && pkg.authProviders) || [];
-    for (var j = 0; j < declared.length; j++) {
-      var id = declared[j] && (declared[j].name || repos[i]);
-      if (!id || seen[id]) continue; seen[id] = 1;
-      out.push({ id: id, handler: declared[j].handler ? join(reposDir(), repos[i], declared[j].handler) : null });
-    }
+  var out = [], seen = {};
+  for (var entry of readDeployedProviders(reposDir())) {
+    if (seen[entry.provider]) continue;
+    seen[entry.provider] = 1;
+    out.push({ id: entry.provider, handler: entry.handlerPath });
   }
   for (var k of Object.keys(modelsCache())) if (!seen[k]) { seen[k] = 1; out.push({ id: k, handler: null }); }
   return out;
