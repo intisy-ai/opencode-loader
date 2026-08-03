@@ -14,7 +14,8 @@ import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunRead
 import { ensureAppCli } from "../core-loader/dist/ensure-app.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { ensureProxy } from "./proxy-boot.js";
-import { frontDoorModulePath, wrapperEnvLines } from "./inject.js";
+// @ts-ignore: generated bundle, no .d.ts
+import { deployFrontDoor } from "../opencode-proxy/dist/index.js";
 
 // Slash-command invocations shell in as `node <this file> <action>`; handle them
 // first and exit, so command/config runs never go through plugin activation.
@@ -168,7 +169,7 @@ function installOcWrapper(configDir: string) {
 
   if (process.platform === "win32") {
     const cmdPath = join(binDir, "oc.cmd");
-    const cmdLines = ["@echo off", "setlocal", `set "HUB_TUI_EXTENSION=${extPath}"`, 'set "HUB_CONFIG_DIR=%USERPROFILE%\\.config\\opencode"', ...wrapperEnvLines(configDir, "cmd")];
+    const cmdLines = ["@echo off", "setlocal", `set "HUB_TUI_EXTENSION=${extPath}"`, 'set "HUB_CONFIG_DIR=%USERPROFILE%\\.config\\opencode"'];
     cmdLines.push(...cliDispatchCmdLines(cliCandidates));
     for (const candidate of tuiCandidates) {
       cmdLines.push(`if exist "${candidate}" ( node "${candidate}" %* & exit /b %errorlevel% )`);
@@ -185,7 +186,6 @@ function installOcWrapper(configDir: string) {
       // tell core-auth (loaded via each provider's handler) which app home we're in, so
       // its model refresh writes opencode.json instead of falling back to ~/.claude
       'export HUB_CONFIG_DIR="$HOME/.config/opencode"',
-      ...wrapperEnvLines(configDir, "sh"),
       ...tuiCandidateResolveShLines(tuiCandidates),
       ...cliDispatchShLines(cliCandidates),
       'if [ -z "$TUI" ] || ! command -v node >/dev/null 2>&1; then exec opencode "$@"; fi',
@@ -252,13 +252,12 @@ export async function activate() {
     writeLog(configDir, "Failed to deploy loader commands: " + e, true);
   }
 
-  // Publishes the loader-owned AppFrontDoor so core-auth (in every provider, in this
-  // same process) resolves it at runtime, even for direct `opencode` launches that
-  // bypass the oc wrapper (whose env lines cover the wrapped launch case).
+  // Best-effort convenience: lands opencode-proxy's generic front-door file even
+  // when the loader (not opencode-proxy itself) drives setup.
   try {
-    process.env.HUB_APP_FRONTDOOR = frontDoorModulePath(configDir);
+    deployFrontDoor(configDir);
   } catch (e) {
-    writeLog(configDir, "Failed to publish HUB_APP_FRONTDOOR: " + e, true);
+    writeLog(configDir, "Failed to deploy front-door: " + e, true);
   }
 
   // Opt-in only: no-op unless config use_proxy=true. Runs in the OpenCode process,
