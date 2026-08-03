@@ -19,9 +19,12 @@ const banner = {
 // startLoaderProxy + opencode-proxy's routing engine, so it must be bundled
 // to stay a single self-contained file with no runtime cross-submodule
 // dependency. (proxy-boot.ts stays inlined into dist/plugin.js via
-// plugin.ts's import; it only runs in-process during activate().)
+// plugin.ts's import; it only runs in-process during activate().) frontdoor.ts
+// is the AppFrontDoor adapter, published for core-auth to resolve at runtime
+// (see HUB_APP_FRONTDOOR); it imports opencode-proxy's serveDirect, so it must
+// be bundled self-contained too.
 await build({
-  entryPoints: ["src/plugin.ts", "src/tui-extension.ts", "src/proxy.ts"],
+  entryPoints: ["src/plugin.ts", "src/tui-extension.ts", "src/proxy.ts", "src/frontdoor.ts"],
   bundle: true,
   platform: "node",
   format: "esm",
@@ -30,4 +33,4 @@ await build({
   logLevel: "info",
 });
 
-console.log("Bundled loader plugin -> dist/plugin.js, dist/tui-extension.js, dist/proxy.js");
+console.log("Bundled loader plugin -> dist/plugin.js, dist/tui-extension.js, dist/proxy.js, dist/frontdoor.js");
