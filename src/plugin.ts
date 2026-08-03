@@ -44,15 +44,15 @@ defineReadme({
     OCBIN -->|run oc| TUI["core-loader TUI (node tui.js)"]
     TUI --> PROJ[Projects tab]
     TUI --> PLUG[Plugins tab]
-    TUI --> PROV[Providers tab — tui-extension.js]
+    TUI --> PROV[Providers tab (tui-extension.js)]
     PROV --> COREAUTH[(core-auth account store)]`,
   structure: {
     src: [
-      "`plugin.ts` — the OpenCode plugin entry (`activate`/`cleanup`); installs the `oc` wrapper, runs plugin-updater, deploys commands. Also acts as the command CLI (`node plugin.js <config|plugins|accounts>`).",
-      "`tui-extension.ts` — the loader's custom Providers tab (auto-discovers installed providers).",
-      "`commands.ts` — cross-app slash-command definitions + their CLI actions.",
-      "`core-loader/` — git submodule ([`intisy-ai/core-loader`](https://github.com/intisy-ai/core-loader)): the TUI engine (`core-loader/dist/tui.js`), built and bundled at publish time.",
-      "`core/` — git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)): shared config + the cross-app command framework, bundled to `core/dist/index.js`.",
+      "`plugin.ts`: the OpenCode plugin entry (`activate`/`cleanup`); installs the `oc` wrapper, runs plugin-updater, deploys commands. Also acts as the command CLI (`node plugin.js <config|plugins|accounts>`).",
+      "`tui-extension.ts`: the loader's custom Providers tab (auto-discovers installed providers).",
+      "`commands.ts`: cross-app slash-command definitions + their CLI actions.",
+      "`core-loader/`: git submodule ([`intisy-ai/core-loader`](https://github.com/intisy-ai/core-loader)), the TUI engine (`core-loader/dist/tui.js`), built and bundled at publish time.",
+      "`core/`: git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)), shared config + the cross-app command framework, bundled to `core/dist/index.js`.",
     ],
     dist: ["compiled output (generated; not committed)."],
   },
@@ -62,7 +62,7 @@ defineReadme({
       id: "requirements",
       title: "Requirements",
       after: "structure",
-      body: "- Node.js 20+ (the TUI runs under Node — no Bun required; it reads the OpenCode session DB via Node 22+'s built-in `node:sqlite`, falling back to `bun:sqlite` when run under Bun).",
+      body: "- Node.js 20+ (the TUI runs under Node, no Bun required; it reads the OpenCode session DB via Node 22+'s built-in `node:sqlite`, falling back to `bun:sqlite` when run under Bun).",
     },
     {
       id: "loader-install-detail",
@@ -74,7 +74,7 @@ defineReadme({
         "```json",
         '{ "name": "opencode-loader", "url": "https://github.com/intisy-ai/opencode-loader", "enabled": true, "autoUpdate": true }',
         "```",
-        "Restart OpenCode — the updater clones, builds (including the submodules), and loads it.",
+        "Restart OpenCode; the updater clones, builds (including the submodules), and loads it.",
         "",
         "When using npm directly, add to `~/.config/opencode/opencode.json`:",
         "",
@@ -100,11 +100,11 @@ defineReadme({
         "|-----|--------------|-------------|",
         "| ↑↓ / W S | Navigate | Navigate |",
         "| Enter | Open action menu | Open action menu |",
-        "| O | Open project | — |",
-        "| P | Pin/Unpin | — |",
-        "| H / U | Hide / Unhide all | — |",
-        "| F | — | Fetch remote updates |",
-        "| A | — | Toggle auto-update |",
+        "| O | Open project | - |",
+        "| P | Pin/Unpin | - |",
+        "| H / U | Hide / Unhide all | - |",
+        "| F | - | Fetch remote updates |",
+        "| A | - | Toggle auto-update |",
         "| ← → | Switch tabs | Switch tabs |",
         "| Q | Quit | Quit |",
       ].join("\n"),
