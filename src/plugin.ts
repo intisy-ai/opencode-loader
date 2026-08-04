@@ -14,6 +14,8 @@ import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunRead
 import { ensureAppCli } from "../core-loader/dist/ensure-app.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { ensureProxy } from "./proxy-boot.js";
+// @ts-ignore: generated bundle, no .d.ts
+import { deployFrontDoor } from "../opencode-proxy/dist/index.js";
 
 // Slash-command invocations shell in as `node <this file> <action>`; handle them
 // first and exit, so command/config runs never go through plugin activation.
@@ -42,15 +44,15 @@ defineReadme({
     OCBIN -->|run oc| TUI["core-loader TUI (node tui.js)"]
     TUI --> PROJ[Projects tab]
     TUI --> PLUG[Plugins tab]
-    TUI --> PROV[Providers tab — tui-extension.js]
+    TUI --> PROV[Providers tab (tui-extension.js)]
     PROV --> COREAUTH[(core-auth account store)]`,
   structure: {
     src: [
-      "`plugin.ts` — the OpenCode plugin entry (`activate`/`cleanup`); installs the `oc` wrapper, runs plugin-updater, deploys commands. Also acts as the command CLI (`node plugin.js <config|plugins|accounts>`).",
-      "`tui-extension.ts` — the loader's custom Providers tab (auto-discovers installed providers).",
-      "`commands.ts` — cross-app slash-command definitions + their CLI actions.",
-      "`core-loader/` — git submodule ([`intisy-ai/core-loader`](https://github.com/intisy-ai/core-loader)): the TUI engine (`core-loader/dist/tui.js`), built and bundled at publish time.",
-      "`core/` — git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)): shared config + the cross-app command framework, bundled to `core/dist/index.js`.",
+      "`plugin.ts`: the OpenCode plugin entry (`activate`/`cleanup`); installs the `oc` wrapper, runs plugin-updater, deploys commands. Also acts as the command CLI (`node plugin.js <config|plugins|accounts>`).",
+      "`tui-extension.ts`: the loader's custom Providers tab (auto-discovers installed providers).",
+      "`commands.ts`: cross-app slash-command definitions + their CLI actions.",
+      "`core-loader/`: git submodule ([`intisy-ai/core-loader`](https://github.com/intisy-ai/core-loader)), the TUI engine (`core-loader/dist/tui.js`), built and bundled at publish time.",
+      "`core/`: git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)), shared config + the cross-app command framework, bundled to `core/dist/index.js`.",
     ],
     dist: ["compiled output (generated; not committed)."],
   },
@@ -60,7 +62,7 @@ defineReadme({
       id: "requirements",
       title: "Requirements",
       after: "structure",
-      body: "- Node.js 20+ (the TUI runs under Node — no Bun required; it reads the OpenCode session DB via Node 22+'s built-in `node:sqlite`, falling back to `bun:sqlite` when run under Bun).",
+      body: "- Node.js 20+ (the TUI runs under Node, no Bun required; it reads the OpenCode session DB via Node 22+'s built-in `node:sqlite`, falling back to `bun:sqlite` when run under Bun).",
     },
     {
       id: "loader-install-detail",
@@ -72,7 +74,7 @@ defineReadme({
         "```json",
         '{ "name": "opencode-loader", "url": "https://github.com/intisy-ai/opencode-loader", "enabled": true, "autoUpdate": true }',
         "```",
-        "Restart OpenCode — the updater clones, builds (including the submodules), and loads it.",
+        "Restart OpenCode; the updater clones, builds (including the submodules), and loads it.",
         "",
         "When using npm directly, add to `~/.config/opencode/opencode.json`:",
         "",
@@ -98,11 +100,11 @@ defineReadme({
         "|-----|--------------|-------------|",
         "| ↑↓ / W S | Navigate | Navigate |",
         "| Enter | Open action menu | Open action menu |",
-        "| O | Open project | — |",
-        "| P | Pin/Unpin | — |",
-        "| H / U | Hide / Unhide all | — |",
-        "| F | — | Fetch remote updates |",
-        "| A | — | Toggle auto-update |",
+        "| O | Open project | - |",
+        "| P | Pin/Unpin | - |",
+        "| H / U | Hide / Unhide all | - |",
+        "| F | - | Fetch remote updates |",
+        "| A | - | Toggle auto-update |",
         "| ← → | Switch tabs | Switch tabs |",
         "| Q | Quit | Quit |",
       ].join("\n"),
@@ -167,7 +169,17 @@ function installOcWrapper(configDir: string) {
 
   if (process.platform === "win32") {
     const cmdPath = join(binDir, "oc.cmd");
-    const cmdLines = ["@echo off", "setlocal", `set "HUB_TUI_EXTENSION=${extPath}"`, 'set "HUB_CONFIG_DIR=%USERPROFILE%\\.config\\opencode"'];
+    const cmdLines = [
+      "@echo off",
+      "setlocal",
+      'set "HUB_CONFIG_DIR=%USERPROFILE%\\.config\\opencode"',
+      // injects this app's identity into core-loader (which otherwise defaults to
+      // OpenCode), symmetric with claude-code-loader's cc.cmd wrapper
+      "set HUB_APP_NAME=OpenCode",
+      "set HUB_CLI_CMD=opencode",
+      "set HUB_NPM_PKG=opencode-ai",
+      `set "HUB_TUI_EXTENSION=${extPath}"`,
+    ];
     cmdLines.push(...cliDispatchCmdLines(cliCandidates));
     for (const candidate of tuiCandidates) {
       cmdLines.push(`if exist "${candidate}" ( node "${candidate}" %* & exit /b %errorlevel% )`);
@@ -180,10 +192,15 @@ function installOcWrapper(configDir: string) {
     const lines = [
       "#!/bin/sh",
       'export PATH="$HOME/.bun/bin:$PATH"',
-      `export HUB_TUI_EXTENSION="${extPath}"`,
       // tell core-auth (loaded via each provider's handler) which app home we're in, so
       // its model refresh writes opencode.json instead of falling back to ~/.claude
       'export HUB_CONFIG_DIR="$HOME/.config/opencode"',
+      // injects this app's identity into core-loader (which otherwise defaults to
+      // OpenCode), symmetric with claude-code-loader's cc wrapper
+      'export HUB_APP_NAME="OpenCode"',
+      'export HUB_CLI_CMD="opencode"',
+      'export HUB_NPM_PKG="opencode-ai"',
+      `export HUB_TUI_EXTENSION="${extPath}"`,
       ...tuiCandidateResolveShLines(tuiCandidates),
       ...cliDispatchShLines(cliCandidates),
       'if [ -z "$TUI" ] || ! command -v node >/dev/null 2>&1; then exec opencode "$@"; fi',
@@ -248,6 +265,14 @@ export async function activate() {
     deployLoaderCommands(configDir);
   } catch (e) {
     writeLog(configDir, "Failed to deploy loader commands: " + e, true);
+  }
+
+  // Best-effort convenience: lands opencode-proxy's generic front-door file even
+  // when the loader (not opencode-proxy itself) drives setup.
+  try {
+    deployFrontDoor(configDir);
+  } catch (e) {
+    writeLog(configDir, "Failed to deploy front-door: " + e, true);
   }
 
   // Opt-in only: no-op unless config use_proxy=true. Runs in the OpenCode process,
