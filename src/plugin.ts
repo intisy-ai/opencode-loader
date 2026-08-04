@@ -169,7 +169,17 @@ function installOcWrapper(configDir: string) {
 
   if (process.platform === "win32") {
     const cmdPath = join(binDir, "oc.cmd");
-    const cmdLines = ["@echo off", "setlocal", `set "HUB_TUI_EXTENSION=${extPath}"`, 'set "HUB_CONFIG_DIR=%USERPROFILE%\\.config\\opencode"'];
+    const cmdLines = [
+      "@echo off",
+      "setlocal",
+      'set "HUB_CONFIG_DIR=%USERPROFILE%\\.config\\opencode"',
+      // injects this app's identity into core-loader (which otherwise defaults to
+      // OpenCode), symmetric with claude-code-loader's cc.cmd wrapper
+      "set HUB_APP_NAME=OpenCode",
+      "set HUB_CLI_CMD=opencode",
+      "set HUB_NPM_PKG=opencode-ai",
+      `set "HUB_TUI_EXTENSION=${extPath}"`,
+    ];
     cmdLines.push(...cliDispatchCmdLines(cliCandidates));
     for (const candidate of tuiCandidates) {
       cmdLines.push(`if exist "${candidate}" ( node "${candidate}" %* & exit /b %errorlevel% )`);
@@ -182,10 +192,15 @@ function installOcWrapper(configDir: string) {
     const lines = [
       "#!/bin/sh",
       'export PATH="$HOME/.bun/bin:$PATH"',
-      `export HUB_TUI_EXTENSION="${extPath}"`,
       // tell core-auth (loaded via each provider's handler) which app home we're in, so
       // its model refresh writes opencode.json instead of falling back to ~/.claude
       'export HUB_CONFIG_DIR="$HOME/.config/opencode"',
+      // injects this app's identity into core-loader (which otherwise defaults to
+      // OpenCode), symmetric with claude-code-loader's cc wrapper
+      'export HUB_APP_NAME="OpenCode"',
+      'export HUB_CLI_CMD="opencode"',
+      'export HUB_NPM_PKG="opencode-ai"',
+      `export HUB_TUI_EXTENSION="${extPath}"`,
       ...tuiCandidateResolveShLines(tuiCandidates),
       ...cliDispatchShLines(cliCandidates),
       'if [ -z "$TUI" ] || ! command -v node >/dev/null 2>&1; then exec opencode "$@"; fi',
