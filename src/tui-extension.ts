@@ -10,7 +10,7 @@ import { homedir } from "os";
 import { createAccountMenu } from "../core-loader/dist/account-menu.js";
 import { readDeployedProviders } from "../core-loader/dist/loader-runtime.js";
 import { loaderConfigDir, loaderReposDir } from "../core-loader/dist/app-home.js";
-import { readActivity, emitEvent, withCause, activityEnv } from "../core/dist/index.js";
+import { readActivity, emitEvent, withCause, activityEnv, setActivityContext } from "../core/dist/index.js";
 import * as caps from "./opencode-caps.js";
 
 const APP_HOME = join(homedir(), ".config", "opencode");
@@ -59,6 +59,7 @@ function handleKey(key, state, tuiApi) {
 
 export default function (tuiApi) {
   tuiApi.registerTab({ id: "providers", label: "Providers", render: render, handleKey: handleKey });
+  setActivityContext({ entry: "tui" });
   // Register ONLY opencode's MCP-server capability (see src/opencode-caps.ts):
   // opencode has its own session UI and no plugin marketplace, so
   // listSessions/foreignPlugins/marketplaces stay unregistered here (their
