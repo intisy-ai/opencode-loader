@@ -10,7 +10,7 @@ import { homedir } from "os";
 import { createAccountMenu } from "../core-loader/dist/account-menu.js";
 import { readDeployedProviders } from "../core-loader/dist/loader-runtime.js";
 import { loaderConfigDir, loaderReposDir } from "../core-loader/dist/app-home.js";
-import { readActivity, createActivitySeam, setActivityContext } from "../core/dist/index.js";
+import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema } from "../core/dist/index.js";
 import * as caps from "./opencode-caps.js";
 
 const APP_HOME = join(homedir(), ".config", "opencode");
@@ -70,9 +70,11 @@ export default function (tuiApi) {
       mcpServers: caps.mcpServers,
       addMcpServer: caps.addMcpServer,
       activity: {
-        read: () => { try { return readActivity([configDir()], { limit: 200 }).records; } catch { return []; } },
+        read: (query) => { try { return readActivity([configDir()], { limit: 200, ...(query || {}) }).records; } catch { return []; } },
         ...createActivitySeam("opencode-loader"),
       },
+      // core owns the shared settings declaration; the menu renders whatever it says
+      globalSettings: (() => { try { return globalSettingsSchema(); } catch { return undefined; } })(),
     });
   }
 }
