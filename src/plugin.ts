@@ -9,9 +9,11 @@ import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "../core-loader/dis
 // @ts-ignore: generated bundle, no .d.ts
 import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines } from "../core-loader/dist/wrapper.js";
 // @ts-ignore: generated bundle, no .d.ts
-import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli } from "../core/dist/index.js";
+import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli, createActivitySeam } from "../core/dist/index.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { ensureAppCli } from "../core-loader/dist/ensure-app.js";
+// @ts-ignore: generated bundle, no .d.ts
+import { setActivitySeam, emitPluginActivated } from "../core-loader/dist/activity-seam.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { ensureProxy } from "./proxy-boot.js";
 // @ts-ignore: generated bundle, no .d.ts
@@ -241,6 +243,12 @@ export async function cleanup(configDir?: string) {
 
 export async function activate() {
   const configDir = getAppConfigDir();
+  try {
+    setActivitySeam(createActivitySeam("opencode-loader"));
+    emitPluginActivated("opencode-loader");
+  } catch (e) {
+    writeLog(configDir, "Failed to wire activity: " + e, true);
+  }
   writeLog(configDir, "OpenCode Loader activating");
 
   try {

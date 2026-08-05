@@ -12,8 +12,20 @@ import { join } from "path";
 import { homedir } from "os";
 import { startLoaderProxy } from "../core-loader/dist/proxy-runner.js";
 import { createProxyServer, opencodeProfile, makeDynamicResolver } from "../opencode-proxy/dist/index.js";
+import { emitEvent, setActivityContext } from "../core/dist/index.js";
 
 const PORT = parseInt(process.env.HUB_PROXY_PORT || "34568", 10);
 const CONFIG_DIR = process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode");
 
-startLoaderProxy({ createProxyServer, makeDynamicResolver, profile: opencodeProfile(), configDir: CONFIG_DIR, port: PORT });
+// This process is the proxy daemon and nothing else, so naming the entry once is
+// accurate for every event it emits, including core-proxy's per-request ones.
+setActivityContext({ entry: "proxy" });
+
+startLoaderProxy({
+  createProxyServer,
+  makeDynamicResolver,
+  profile: opencodeProfile(),
+  configDir: CONFIG_DIR,
+  port: PORT,
+  emitActivity: (spec) => emitEvent(spec, "core-proxy"),
+});

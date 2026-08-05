@@ -10,6 +10,7 @@ import { homedir } from "os";
 import { createAccountMenu } from "../core-loader/dist/account-menu.js";
 import { readDeployedProviders } from "../core-loader/dist/loader-runtime.js";
 import { loaderConfigDir, loaderReposDir } from "../core-loader/dist/app-home.js";
+import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema } from "../core/dist/index.js";
 import * as caps from "./opencode-caps.js";
 
 const APP_HOME = join(homedir(), ".config", "opencode");
@@ -58,12 +59,22 @@ function handleKey(key, state, tuiApi) {
 
 export default function (tuiApi) {
   tuiApi.registerTab({ id: "providers", label: "Providers", render: render, handleKey: handleKey });
+  setActivityContext({ entry: "tui" });
   // Register ONLY opencode's MCP-server capability (see src/opencode-caps.ts):
   // opencode has its own session UI and no plugin marketplace, so
   // listSessions/foreignPlugins/marketplaces stay unregistered here (their
   // core-loader UI sections are then simply absent under this loader).
   // Guarded: an older/unbumped core-loader submodule may not carry registerCapabilities yet.
   if (typeof tuiApi.registerCapabilities === "function") {
-    tuiApi.registerCapabilities({ mcpServers: caps.mcpServers, addMcpServer: caps.addMcpServer });
+    tuiApi.registerCapabilities({
+      mcpServers: caps.mcpServers,
+      addMcpServer: caps.addMcpServer,
+      activity: {
+        read: (query) => { try { return readActivity([configDir()], { limit: 200, ...(query || {}) }).records; } catch { return []; } },
+        ...createActivitySeam("opencode-loader"),
+      },
+      // core owns the shared settings declaration; the menu renders whatever it says
+      globalSettings: (() => { try { return globalSettingsSchema(); } catch { return undefined; } })(),
+    });
   }
 }
