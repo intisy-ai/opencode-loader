@@ -4,12 +4,11 @@
 // opens that provider's account/quota menu in-tab. The menu rendering + all its
 // navigation live in core-loader's shared account-menu (also used by the Claude
 // loader); the menu MODEL lives in core-auth. This file only lists providers.
-import { readFileSync } from "fs";
 import { pathToFileURL } from "url";
 import { join } from "path";
 import { homedir } from "os";
 import { createAccountMenu } from "../core-loader/dist/account-menu.js";
-import { readDeployedProviders } from "../core-loader/dist/loader-runtime.js";
+import { providerRows } from "../core-loader/dist/provider-catalog.js";
 import { loaderConfigDir, loaderReposDir } from "../core-loader/dist/app-home.js";
 import { extraProviderRows } from "../core-loader/dist/provider-rows.js";
 import { getUpdater, setupPlugin } from "../core-loader/dist/updater.js";
@@ -19,19 +18,10 @@ import * as caps from "./opencode-caps.js";
 const APP_HOME = join(homedir(), ".config", "opencode");
 function configDir() { return loaderConfigDir(APP_HOME); }
 function reposDir() { return loaderReposDir(APP_HOME); }
-function readJSON(p, fallback) { try { return JSON.parse(readFileSync(p, "utf8")); } catch (e) { return fallback; } }
-function modelsCache() { const d = join(configDir(), "config"); return readJSON(join(d, "models.json"), null) || readJSON(join(d, "core-auth-models.json"), {}); }
-function modelCount(pid) { var c = readJSON(caps.opencodeConfigPath(), {}); return Object.keys((c.provider && c.provider[pid] && c.provider[pid].models) || {}).length; }
-
+// Which providers exist here and how many models each serves comes from core-loader, so this
+// loader and the Claude one cannot report different numbers for the same home.
 function providers() {
-  var out = [], seen = {};
-  for (var entry of readDeployedProviders(reposDir())) {
-    if (seen[entry.provider]) continue;
-    seen[entry.provider] = 1;
-    out.push({ id: entry.provider, handler: entry.handlerPath });
-  }
-  for (var k of Object.keys(modelsCache())) if (!seen[k]) { seen[k] = 1; out.push({ id: k, handler: null }); }
-  return out;
+  return providerRows(reposDir(), configDir());
 }
 
 var tab = { cur: 0 };
@@ -86,7 +76,7 @@ function render(state, h) {
   h.pushBody("", false);
   if (!ps.length) h.pushBody("    " + h.DIM + "No providers installed." + h.RST, false);
   ps.forEach(function (p, i) {
-    var sel = tab.cur === i; var c = modelCount(p.id);
+    var sel = tab.cur === i; var c = p.count;
     h.pushBody("  " + (sel ? h.ACCENT + "❯ " + h.RST : "  ") + (sel ? h.BG_SEL + h.BOLD + h.WHITE : h.GRAY) + p.id + h.RST + h.DIM + "  " + (c ? c + " models" : "no models yet") + h.RST, sel);
   });
   if (rows.length) {
