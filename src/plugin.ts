@@ -17,7 +17,7 @@ import { setActivitySeam, emitPluginActivated } from "@intisy-ai/core-loader/dis
 // @ts-ignore: generated bundle, no .d.ts
 import { ensureProxy } from "./proxy-boot.js";
 // @ts-ignore: generated bundle, no .d.ts
-import { deployFrontDoor } from "../opencode-proxy/dist/index.js";
+import { deployFrontDoor } from "@intisy-ai/opencode-proxy";
 
 // Slash-command invocations shell in as `node <this file> <action>`; handle them
 // first and exit, so command/config runs never go through plugin activation.

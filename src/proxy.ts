@@ -11,7 +11,7 @@
 import { join } from "path";
 import { homedir } from "os";
 import { startLoaderProxy } from "@intisy-ai/core-loader/dist/proxy-runner.js";
-import { createProxyServer, opencodeProfile, makeDynamicResolver } from "../opencode-proxy/dist/index.js";
+import { createProxyServer, opencodeProfile, makeDynamicResolver } from "@intisy-ai/opencode-proxy";
 import { emitEvent, setActivityContext } from "@intisy-ai/core";
 
 const PORT = parseInt(process.env.HUB_PROXY_PORT || "34568", 10);
