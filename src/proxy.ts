@@ -10,9 +10,9 @@
 // opencode-proxy and the :34568 default port.
 import { join } from "path";
 import { homedir } from "os";
-import { startLoaderProxy } from "../core-loader/dist/proxy-runner.js";
+import { startLoaderProxy } from "@intisy-ai/core-loader/dist/proxy-runner.js";
 import { createProxyServer, opencodeProfile, makeDynamicResolver } from "../opencode-proxy/dist/index.js";
-import { emitEvent, setActivityContext } from "../core/dist/index.js";
+import { emitEvent, setActivityContext } from "@intisy-ai/core";
 
 const PORT = parseInt(process.env.HUB_PROXY_PORT || "34568", 10);
 const CONFIG_DIR = process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode");

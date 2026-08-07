@@ -28,6 +28,9 @@ await build({
   outdir: "dist",
   banner,
   logLevel: "info",
+  // Shared libraries are materialised once per home by plugin-updater instead of
+  // being carried by every plugin that uses them.
+  external: ["@intisy-ai/core", "@intisy-ai/core-loader"],
 });
 
 console.log("Bundled loader plugin -> dist/plugin.js, dist/tui-extension.js, dist/proxy.js");
