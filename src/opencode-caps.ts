@@ -20,7 +20,7 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
-import { loaderConfigDir } from "../core-loader/dist/app-home.js";
+import { loaderConfigDir } from "@intisy-ai/core-loader/dist/app-home.js";
 
 const APP_HOME = join(homedir(), ".config", "opencode");
 function configDir() { return loaderConfigDir(APP_HOME); }

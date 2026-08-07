@@ -5,8 +5,8 @@
 import { join } from "path";
 import { existsSync } from "fs";
 import { homedir } from "os";
-import { runConfigCli } from "../core/dist/index.js";
-import { makeLoaderCommands } from "../core-loader/dist/loader-commands.js";
+import { runConfigCli } from "@intisy-ai/core";
+import { makeLoaderCommands } from "@intisy-ai/core-loader/dist/loader-commands.js";
 
 function loaderEntry(configDir) {
   const candidates = [

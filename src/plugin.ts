@@ -5,19 +5,19 @@ import { fileURLToPath } from "url";
 // @ts-ignore: generated bundle, no .d.ts
 import { maybeRunCli, deployLoaderCommands } from "./commands.js";
 // @ts-ignore: generated bundle, no .d.ts
-import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "../core-loader/dist/loader-runtime.js";
+import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "@intisy-ai/core-loader/dist/loader-runtime.js";
 // @ts-ignore: generated bundle, no .d.ts
-import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines } from "../core-loader/dist/wrapper.js";
+import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines } from "@intisy-ai/core-loader/dist/wrapper.js";
 // @ts-ignore: generated bundle, no .d.ts
-import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli, createActivitySeam } from "../core/dist/index.js";
+import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli, createActivitySeam } from "@intisy-ai/core";
 // @ts-ignore: generated bundle, no .d.ts
-import { ensureAppCli } from "../core-loader/dist/ensure-app.js";
+import { ensureAppCli } from "@intisy-ai/core-loader/dist/ensure-app.js";
 // @ts-ignore: generated bundle, no .d.ts
-import { setActivitySeam, emitPluginActivated } from "../core-loader/dist/activity-seam.js";
+import { setActivitySeam, emitPluginActivated } from "@intisy-ai/core-loader/dist/activity-seam.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { ensureProxy } from "./proxy-boot.js";
 // @ts-ignore: generated bundle, no .d.ts
-import { deployFrontDoor } from "../opencode-proxy/dist/index.js";
+import { deployFrontDoor } from "@intisy-ai/opencode-proxy";
 
 // Slash-command invocations shell in as `node <this file> <action>`; handle them
 // first and exit, so command/config runs never go through plugin activation.

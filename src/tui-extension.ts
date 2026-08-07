@@ -7,12 +7,12 @@
 import { pathToFileURL } from "url";
 import { join } from "path";
 import { homedir } from "os";
-import { createAccountMenu } from "../core-loader/dist/account-menu.js";
-import { providerRows } from "../core-loader/dist/provider-catalog.js";
-import { loaderConfigDir, loaderReposDir } from "../core-loader/dist/app-home.js";
-import { extraProviderRows } from "../core-loader/dist/provider-rows.js";
-import { getUpdater, setupPlugin } from "../core-loader/dist/updater.js";
-import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema, pluginByCapability, getConfigValue, setConfigValue } from "../core/dist/index.js";
+import { createAccountMenu } from "@intisy-ai/core-loader/dist/account-menu.js";
+import { providerRows } from "@intisy-ai/core-loader/dist/provider-catalog.js";
+import { loaderConfigDir, loaderReposDir } from "@intisy-ai/core-loader/dist/app-home.js";
+import { extraProviderRows } from "@intisy-ai/core-loader/dist/provider-rows.js";
+import { getUpdater, setupPlugin } from "@intisy-ai/core-loader/dist/updater.js";
+import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema, pluginByCapability, getConfigValue, setConfigValue } from "@intisy-ai/core";
 import * as caps from "./opencode-caps.js";
 
 const APP_HOME = join(homedir(), ".config", "opencode");
