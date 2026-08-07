@@ -7,9 +7,9 @@ import { maybeRunCli, deployLoaderCommands } from "./commands.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "@intisy-ai/core-loader/dist/loader-runtime.js";
 // @ts-ignore: generated bundle, no .d.ts
-import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines } from "@intisy-ai/core-loader/dist/wrapper.js";
+import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines, subdirEnvCmdLines, subdirEnvShLines } from "@intisy-ai/core-loader/dist/wrapper.js";
 // @ts-ignore: generated bundle, no .d.ts
-import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli, createActivitySeam } from "@intisy-ai/core";
+import { getAppDescriptor, getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli, createActivitySeam } from "@intisy-ai/core";
 // @ts-ignore: generated bundle, no .d.ts
 import { ensureAppCli } from "@intisy-ai/core-loader/dist/ensure-app.js";
 // @ts-ignore: generated bundle, no .d.ts
@@ -177,6 +177,7 @@ function installOcWrapper(configDir: string) {
       'set "HUB_CONFIG_DIR=%USERPROFILE%\\.config\\opencode"',
       // injects this app's identity into core-loader (which otherwise defaults to
       // OpenCode), symmetric with claude-code-loader's cc.cmd wrapper
+      ...subdirEnvCmdLines(getAppDescriptor("opencode")?.paths ?? {}),
       "set HUB_APP_NAME=OpenCode",
       "set HUB_CLI_CMD=opencode",
       "set HUB_NPM_PKG=opencode-ai",
@@ -199,6 +200,7 @@ function installOcWrapper(configDir: string) {
       'export HUB_CONFIG_DIR="$HOME/.config/opencode"',
       // injects this app's identity into core-loader (which otherwise defaults to
       // OpenCode), symmetric with claude-code-loader's cc wrapper
+      ...subdirEnvShLines(getAppDescriptor('opencode')?.paths ?? {}),
       'export HUB_APP_NAME="OpenCode"',
       'export HUB_CLI_CMD="opencode"',
       'export HUB_NPM_PKG="opencode-ai"',
