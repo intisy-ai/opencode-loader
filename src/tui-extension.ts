@@ -12,7 +12,7 @@ import { providerRows } from "@intisy-ai/core-loader/dist/provider-catalog.js";
 import { loaderConfigDir, loaderReposDir } from "@intisy-ai/core-loader/dist/app-home.js";
 import { extraProviderRows } from "@intisy-ai/core-loader/dist/provider-rows.js";
 import { getUpdater, setupPlugin } from "@intisy-ai/core-loader/dist/updater.js";
-import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema, getConfigValue, setConfigValue } from "@intisy-ai/core";
+import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema, getConfigValue, setConfigValue, createPluginRuntime } from "@intisy-ai/core";
 import * as caps from "./opencode-caps.js";
 
 const APP_HOME = join(homedir(), ".config", "opencode");
@@ -117,6 +117,9 @@ export default function (tuiApi) {
     tuiApi.registerCapabilities({
       mcpServers: caps.mcpServers,
       addMcpServer: caps.addMcpServer,
+      // The per-plugin half of a plugin's context: core owns config, logging, paths and the bus,
+      // and core-loader carries no core submodule, so the loader is what hands it over.
+      runtimeFor: (manifest) => createPluginRuntime(manifest.id, configDir()),
       activity: {
         read: (query) => { try { return readActivity([configDir()], { limit: 200, ...(query || {}) }).records; } catch { return []; } },
         ...createActivitySeam("opencode-loader"),

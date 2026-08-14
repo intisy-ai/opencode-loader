@@ -1,0 +1,41 @@
+// The host builds every plugin's context from this runtime. core-loader carries no core submodule
+// and starts no host at all when nothing is injected, so a loader that stops registering it leaves
+// every plugin screen and setting silently empty. Isolated temp HUB_CONFIG_DIR, never the real
+// ~/.config/opencode.
+import { test, expect, beforeEach, afterEach } from "vitest";
+import { mkdtempSync, rmSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
+import tuiExtension from "../tui-extension.js";
+
+let homeDir;
+let prevConfigDir;
+
+beforeEach(() => {
+  homeDir = mkdtempSync(join(tmpdir(), "opencode-loader-tui-extension-"));
+  prevConfigDir = process.env.HUB_CONFIG_DIR;
+  process.env.HUB_CONFIG_DIR = homeDir;
+});
+
+afterEach(() => {
+  if (prevConfigDir === undefined) delete process.env.HUB_CONFIG_DIR;
+  else process.env.HUB_CONFIG_DIR = prevConfigDir;
+  rmSync(homeDir, { recursive: true, force: true });
+});
+
+test("the extension registers a runtime the plugin host can build a context from", async () => {
+  const registered = {};
+  const tuiApi = {
+    registerTab: () => {},
+    registerCapabilities: (caps) => Object.assign(registered, caps),
+  };
+
+  await tuiExtension(tuiApi);
+
+  expect(typeof registered.runtimeFor).toBe("function");
+  const runtime = registered.runtimeFor({ id: "demo", api: 1 });
+  expect(typeof runtime.config.all).toBe("function");
+  expect(typeof runtime.log.info).toBe("function");
+  expect(typeof runtime.paths.home).toBe("string");
+  expect(typeof runtime.events.publish).toBe("function");
+});
