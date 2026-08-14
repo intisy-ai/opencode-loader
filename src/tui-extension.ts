@@ -12,7 +12,7 @@ import { providerRows } from "@intisy-ai/core-loader/dist/provider-catalog.js";
 import { loaderConfigDir, loaderReposDir } from "@intisy-ai/core-loader/dist/app-home.js";
 import { extraProviderRows } from "@intisy-ai/core-loader/dist/provider-rows.js";
 import { getUpdater, setupPlugin } from "@intisy-ai/core-loader/dist/updater.js";
-import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema, pluginByCapability, getConfigValue, setConfigValue } from "@intisy-ai/core";
+import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema, getConfigValue, setConfigValue } from "@intisy-ai/core";
 import * as caps from "./opencode-caps.js";
 
 const APP_HOME = join(homedir(), ".config", "opencode");
@@ -42,7 +42,7 @@ async function endpointsApi(engine) {
 function ownRows() {
   return extraProviderRows({
     reposDir: reposDir(),
-    pluginByCapability: pluginByCapability,
+    pluginByCapability: caps.pluginByCapability,
     getConfigValue: getConfigValue,
     setConfigValue: setConfigValue,
     // The plugin owns what an endpoint is, whether one would work, and how it becomes
