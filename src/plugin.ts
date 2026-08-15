@@ -179,6 +179,8 @@ function installOcWrapper(configDir: string) {
       ...subdirEnvCmdLines(getAppDescriptor("opencode")?.paths ?? {}),
       "set HUB_APP_NAME=OpenCode",
       "set HUB_CLI_CMD=opencode",
+      // core-loader is app-agnostic and must not guess this; must match cairn.json app.id.
+      "set HUB_APP_ID=opencode",
       "set HUB_NPM_PKG=opencode-ai",
       `set "HUB_TUI_EXTENSION=${extPath}"`,
     ];
@@ -202,6 +204,8 @@ function installOcWrapper(configDir: string) {
       ...subdirEnvShLines(getAppDescriptor('opencode')?.paths ?? {}),
       'export HUB_APP_NAME="OpenCode"',
       'export HUB_CLI_CMD="opencode"',
+      // core-loader is app-agnostic and must not guess this; must match cairn.json app.id.
+      'export HUB_APP_ID="opencode"',
       'export HUB_NPM_PKG="opencode-ai"',
       `export HUB_TUI_EXTENSION="${extPath}"`,
       ...tuiCandidateResolveShLines(tuiCandidates),
