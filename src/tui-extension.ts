@@ -17,6 +17,7 @@ import {
   applyManifestDeclarations,
   ACCOUNTS, ACTIVITY, CUSTOM_ENDPOINTS, PLUGIN_MANAGEMENT, ROUTING, SCREENS, SETTINGS,
 } from "@intisy-ai/core";
+import { PROVIDER_SUPPORT, providerSupport } from "@intisy-ai/core-auth";
 import * as caps from "./opencode-caps.js";
 
 const APP_HOME = join(homedir(), ".config", "opencode");
@@ -131,6 +132,9 @@ export default function (tuiApi) {
       // against them. The lists are what core-loader's own surfaces render.
       vocabulary: [SCREENS, SETTINGS, CUSTOM_ENDPOINTS, PLUGIN_MANAGEMENT],
       wellKnownServices: [ACCOUNTS, ROUTING, ACTIVITY],
+      // Behaviour a plugin may not link for itself: core-auth's provider helpers, linked once here
+      // rather than copied into every provider bundle.
+      services: [{ id: PROVIDER_SUPPORT, implementation: providerSupport() }],
       activity: {
         read: (query) => { try { return readActivity([configDir()], { limit: 200, ...(query || {}) }).records; } catch { return []; } },
         ...createActivitySeam("opencode-loader"),
