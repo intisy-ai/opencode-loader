@@ -99,7 +99,7 @@ Deployed automatically on activation to both apps' command directories (`~/.conf
 
 ## Configuration
 
-Config file: `<configDir>/config/opencode-loader.json` (edit via the loader or `/opencode-loader-config set`).
+Config file: `<configDir>/config/opencode-loader.json` (edit it directly, or through whatever settings surface the app offers).
 
 ```json
 {
