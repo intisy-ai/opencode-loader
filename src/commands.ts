@@ -6,7 +6,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { homedir } from "os";
 import { runConfigCli, runAllConfigCli, applyManifestDeclarations, appPaths, getAppDescriptor } from "@intisy-ai/core";
-import { readDeployedManifests } from "@intisy-ai/plugin-host";
+import { readDeployedManifests } from "@intisy-ai/api/host";
 import { makeLoaderCommands } from "@intisy-ai/core-loader/dist/loader-commands.js";
 
 function loaderEntry(configDir) {

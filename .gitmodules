@@ -8,10 +8,6 @@
 [submodule "opencode-proxy"]
 	path = opencode-proxy
 	url = https://github.com/intisy-ai/opencode-proxy.git
-[submodule "plugin-host"]
-	path = plugin-host
-	url = https://github.com/intisy-ai/plugin-host.git
-	branch = experimental
 [submodule "core-auth"]
 	path = core-auth
 	url = https://github.com/intisy-ai/core-auth.git
