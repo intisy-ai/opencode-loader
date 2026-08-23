@@ -14,6 +14,7 @@ import { extraProviderRows } from "@intisy-ai/core-loader/dist/provider-rows.js"
 import { getUpdater, setupPlugin } from "@intisy-ai/core-loader/dist/updater.js";
 import {
   readActivity, createActivitySeam, setActivityContext, globalSettingsSchema, getConfigValue, setConfigValue, createPluginRuntime,
+  applyManifestDeclarations,
   ACCOUNTS, ACTIVITY, CUSTOM_ENDPOINTS, PLUGIN_MANAGEMENT, ROUTING, SCREENS, SETTINGS,
 } from "@intisy-ai/core";
 import * as caps from "./opencode-caps.js";
@@ -123,6 +124,9 @@ export default function (tuiApi) {
       // The per-plugin half of a plugin's context: core owns config, logging, paths and the bus,
       // and core-loader carries no core submodule, so the loader is what hands it over.
       runtimeFor: (manifest) => createPluginRuntime(manifest.id, configDir()),
+      // Same reason again: carrying out what a manifest declares is core's job, so the loader is
+      // what hands it over. A plugin's settings and commands then exist without running it.
+      applyDeclarations: (manifests) => applyManifestDeclarations(manifests, configDir()),
       // Same reason: core mints these ids, and the host verifies a plugin's declared capabilities
       // against them. The lists are what core-loader's own surfaces render.
       vocabulary: [SCREENS, SETTINGS, CUSTOM_ENDPOINTS, PLUGIN_MANAGEMENT],
