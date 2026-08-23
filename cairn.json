@@ -22,7 +22,8 @@
     "npmPlugins": {
       "configFiles": ["opencode.json", "opencode.jsonc"],
       "pluginsKey": "plugin",
-      "packageCache": "~/.cache/opencode/packages"
+      "packageCache": "~/.cache/opencode/packages",
+      "schemaUrl": "https://opencode.ai/config.json"
     },
     "discovery": {
       "topic": "opencode-plugin",
