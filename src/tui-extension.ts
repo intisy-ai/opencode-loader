@@ -12,11 +12,7 @@ import { providerRows } from "@intisy-ai/core-loader/dist/provider-catalog.js";
 import { loaderConfigDir, loaderReposDir } from "@intisy-ai/core-loader/dist/app-home.js";
 import { extraProviderRows } from "@intisy-ai/core-loader/dist/provider-rows.js";
 import { getUpdater, setupPlugin } from "@intisy-ai/core-loader/dist/updater.js";
-import {
-  readActivity, createActivitySeam, setActivityContext, globalSettingsSchema, getConfigValue, setConfigValue, createPluginRuntime,
-  applyManifestDeclarations,
-  ACCOUNTS, ACTIVITY, CUSTOM_ENDPOINTS, PLUGIN_MANAGEMENT, ROUTING, SCREENS, SETTINGS,
-} from "@intisy-ai/core";
+import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema, getConfigValue, setConfigValue } from "@intisy-ai/core";
 import { PROVIDER_SUPPORT, providerSupport } from "@intisy-ai/core-auth";
 import * as caps from "./opencode-caps.js";
 
@@ -117,23 +113,14 @@ export default function (tuiApi) {
   // opencode has its own session UI and no plugin marketplace, so
   // listSessions/foreignPlugins/marketplaces stay unregistered here (their
   // core-loader UI sections are then simply absent under this loader).
-  // Guarded: an older/unbumped core-loader submodule may not carry registerCapabilities yet.
+  // Guarded: core-loader resolves from a version range, so an older one may not carry it yet.
   if (typeof tuiApi.registerCapabilities === "function") {
     tuiApi.registerCapabilities({
       mcpServers: caps.mcpServers,
       addMcpServer: caps.addMcpServer,
-      // The per-plugin half of a plugin's context: core owns config, logging, paths and the bus,
-      // and core-loader carries no core submodule, so the loader is what hands it over.
-      runtimeFor: (manifest) => createPluginRuntime(manifest.id, configDir()),
-      // Same reason again: carrying out what a manifest declares is core's job, so the loader is
-      // what hands it over. A plugin's settings and commands then exist without running it.
-      applyDeclarations: (manifests) => applyManifestDeclarations(manifests, configDir()),
-      // Same reason: core mints these ids, and the host verifies a plugin's declared capabilities
-      // against them. The lists are what core-loader's own surfaces render.
-      vocabulary: [SCREENS, SETTINGS, CUSTOM_ENDPOINTS, PLUGIN_MANAGEMENT],
-      wellKnownServices: [ACCOUNTS, ROUTING, ACTIVITY],
-      // Behaviour a plugin may not link for itself: core-auth's provider helpers, linked once here
-      // rather than copied into every provider bundle.
+      // Behaviour a plugin may not link for itself: core-auth's provider helpers, which core-loader
+      // may not link either, being in the same layer. Linked once here rather than copied into every
+      // provider bundle.
       services: [{ id: PROVIDER_SUPPORT, implementation: providerSupport() }],
       activity: {
         read: (query) => { try { return readActivity([configDir()], { limit: 200, ...(query || {}) }).records; } catch { return []; } },
