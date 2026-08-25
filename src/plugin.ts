@@ -7,9 +7,8 @@ import { maybeRunCli, deployLoaderCommands } from "./commands.js";
 // @ts-ignore: generated bundle, no .d.ts
 import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "@intisy-ai/core-loader/dist/loader-runtime.js";
 // @ts-ignore: generated bundle, no .d.ts
-import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines } from "@intisy-ai/core-loader/dist/wrapper.js";
-// @ts-ignore: generated bundle, no .d.ts
-import { getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli, createActivitySeam } from "@intisy-ai/core";
+import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines, subdirEnvCmdLines, subdirEnvShLines } from "@intisy-ai/core-loader/dist/wrapper.js";
+import { getAppDescriptor, getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli, createActivitySeam } from "@intisy-ai/core";
 // @ts-ignore: generated bundle, no .d.ts
 import { ensureAppCli } from "@intisy-ai/core-loader/dist/ensure-app.js";
 // @ts-ignore: generated bundle, no .d.ts
@@ -53,8 +52,6 @@ defineReadme({
       "`plugin.ts`: the OpenCode plugin entry (`activate`/`cleanup`); installs the `oc` wrapper, runs plugin-updater, deploys commands. Also acts as the command CLI (`node plugin.js <config|plugins|accounts>`).",
       "`tui-extension.ts`: the loader's custom Providers tab (auto-discovers installed providers).",
       "`commands.ts`: cross-app slash-command definitions + their CLI actions.",
-      "`core-loader/`: git submodule ([`intisy-ai/core-loader`](https://github.com/intisy-ai/core-loader)), the TUI engine (`core-loader/dist/tui.js`), built and bundled at publish time.",
-      "`core/`: git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)), shared config + the cross-app command framework, bundled to `core/dist/index.js`.",
     ],
     dist: ["compiled output (generated; not committed)."],
   },
@@ -76,7 +73,7 @@ defineReadme({
         "```json",
         '{ "name": "opencode-loader", "url": "https://github.com/intisy-ai/opencode-loader", "enabled": true, "autoUpdate": true }',
         "```",
-        "Restart OpenCode; the updater clones, builds (including the submodules), and loads it.",
+        "Restart OpenCode; the updater clones, builds and loads it.",
         "",
         "When using npm directly, add to `~/.config/opencode/opencode.json`:",
         "",
@@ -177,8 +174,11 @@ function installOcWrapper(configDir: string) {
       'set "HUB_CONFIG_DIR=%USERPROFILE%\\.config\\opencode"',
       // injects this app's identity into core-loader (which otherwise defaults to
       // OpenCode), symmetric with claude-code-loader's cc.cmd wrapper
+      ...subdirEnvCmdLines(getAppDescriptor("opencode")?.paths ?? {}),
       "set HUB_APP_NAME=OpenCode",
       "set HUB_CLI_CMD=opencode",
+      // core-loader is app-agnostic and must not guess this; must match cairn.json app.id.
+      "set HUB_APP_ID=opencode",
       "set HUB_NPM_PKG=opencode-ai",
       `set "HUB_TUI_EXTENSION=${extPath}"`,
     ];
@@ -199,8 +199,11 @@ function installOcWrapper(configDir: string) {
       'export HUB_CONFIG_DIR="$HOME/.config/opencode"',
       // injects this app's identity into core-loader (which otherwise defaults to
       // OpenCode), symmetric with claude-code-loader's cc wrapper
+      ...subdirEnvShLines(getAppDescriptor('opencode')?.paths ?? {}),
       'export HUB_APP_NAME="OpenCode"',
       'export HUB_CLI_CMD="opencode"',
+      // core-loader is app-agnostic and must not guess this; must match cairn.json app.id.
+      'export HUB_APP_ID="opencode"',
       'export HUB_NPM_PKG="opencode-ai"',
       `export HUB_TUI_EXTENSION="${extPath}"`,
       ...tuiCandidateResolveShLines(tuiCandidates),
@@ -244,6 +247,8 @@ export async function cleanup(configDir?: string) {
 export async function activate() {
   const configDir = getAppConfigDir();
   try {
+    // @ts-expect-error core types the emitter to its spec, core-loader to the bare record it
+    // builds, and this loader is the only component holding both.
     setActivitySeam(createActivitySeam("opencode-loader"));
     emitPluginActivated("opencode-loader");
   } catch (e) {
