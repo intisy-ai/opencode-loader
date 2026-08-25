@@ -6,3 +6,6 @@ package-lock.json
 .superpowers/
 graphify-out/
 docs/
+
+# Generated on the default branch by the release readme job.
+README.md
