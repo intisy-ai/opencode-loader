@@ -27,8 +27,6 @@ flowchart TD
   - `plugin.ts`: the OpenCode plugin entry (`activate`/`cleanup`); installs the `oc` wrapper, runs plugin-updater, deploys commands. Also acts as the command CLI (`node plugin.js <config|plugins|accounts>`).
   - `tui-extension.ts`: the loader's custom Providers tab (auto-discovers installed providers).
   - `commands.ts`: cross-app slash-command definitions + their CLI actions.
-  - `core-loader/`: git submodule ([`intisy-ai/core-loader`](https://github.com/intisy-ai/core-loader)), the TUI engine (`core-loader/dist/tui.js`), built and bundled at publish time.
-  - `core/`: git submodule ([`intisy-ai/core`](https://github.com/intisy-ai/core)), shared config + the cross-app command framework, bundled to `core/dist/index.js`.
 - `dist/`
   - compiled output (generated; not committed).
 
@@ -57,7 +55,7 @@ When using plugin-updater, add this entry to `~/.config/opencode/config/plugins.
 ```json
 { "name": "opencode-loader", "url": "https://github.com/intisy-ai/opencode-loader", "enabled": true, "autoUpdate": true }
 ```
-Restart OpenCode; the updater clones, builds (including the submodules), and loads it.
+Restart OpenCode; the updater clones, builds and loads it.
 
 When using npm directly, add to `~/.config/opencode/opencode.json`:
 
