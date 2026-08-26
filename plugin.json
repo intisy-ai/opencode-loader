@@ -1,0 +1,83 @@
+{
+  "$schema": "./node_modules/@intisy-ai/api/schema/plugin.schema.json",
+  "id": "opencode-loader",
+  "api": 1,
+  "displayName": "OpenCode Loader",
+  "icon": "icon.svg",
+  "publish": {
+    "generatedReadme": true
+  },
+  "repo": {
+    "role": "OpenCode loader",
+    "category": "app-loader",
+    "domains": [
+      "opencode"
+    ],
+    "tech": [
+      "typescript"
+    ]
+  },
+  "app": {
+    "id": "opencode",
+    "label": "OpenCode",
+    "home": {
+      "envOverride": "HUB_OPENCODE_DIR",
+      "nativeEnv": "OPENCODE_CONFIG_DIR",
+      "xdgSubdir": "opencode",
+      "candidates": [
+        "~/.config/opencode",
+        "~/.opencode"
+      ]
+    },
+    "detect": {
+      "binary": "opencode",
+      "pkg": "opencode-ai"
+    },
+    "loader": {
+      "id": "opencode-loader",
+      "url": "intisy-ai/opencode-loader"
+    },
+    "commandsSubdir": "command",
+    "proxyPort": 34568,
+    "integration": "native",
+    "wireFormat": "anthropic",
+    "usage": {
+      "formats": [
+        "opencode-sqlite",
+        "opencode-legacy-files"
+      ]
+    },
+    "accent": "#5fafaf",
+    "wrapperCommand": "oc",
+    "npmPlugins": {
+      "configFiles": [
+        "opencode.json",
+        "opencode.jsonc"
+      ],
+      "pluginsKey": "plugin",
+      "packageCache": "~/.cache/opencode/packages",
+      "schemaUrl": "https://opencode.ai/config.json"
+    },
+    "discovery": {
+      "topic": "opencode-plugin",
+      "searchQuery": "opencode",
+      "awesomeList": "https://raw.githubusercontent.com/awesome-opencode/awesome-opencode/main/README.md"
+    },
+    "projects": {
+      "sessionDb": [
+        "~/.local/share/opencode/opencode.db",
+        "opencode.db"
+      ],
+      "markerFile": "opencode"
+    },
+    "modelCatalog": {
+      "files": [
+        "opencode.jsonc",
+        "opencode.json"
+      ],
+      "envOverride": "OPENCODE_CONFIG",
+      "schemaUrl": "https://opencode.ai/config.json",
+      "providerKey": "provider"
+    }
+  }
+}
