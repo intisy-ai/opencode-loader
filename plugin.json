@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/@intisy-ai/api/schema/plugin.schema.json",
+  "id": "opencode-loader",
+  "api": 1,
+  "publish": {
+    "generatedReadme": true
+  },
+  "repo": {
+    "role": "OpenCode loader",
+    "category": "app-loader",
+    "domains": [
+      "opencode"
+    ],
+    "tech": [
+      "typescript"
+    ]
+  }
+}
