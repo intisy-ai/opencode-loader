@@ -117,6 +117,7 @@ function handleKey(key: string | null, state: CustomTabContext, tuiApi: TuiApi):
   }
 }
 
+/** Registers this loader's Providers tab and everything this app can do, at TUI startup. */
 export default function (tuiApi: TuiApi): void {
   tuiApi.registerTab({ id: "providers", label: "Providers", render: render, handleKey: handleKey });
   setActivityContext({ entry: "tui" });

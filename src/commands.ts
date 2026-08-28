@@ -43,5 +43,7 @@ const commands = makeLoaderCommands({
   authHint: "tell the user to log in (oc auth login)",
 });
 
+/** Writes this loader's slash-command files into the app's command directory. */
 export const deployLoaderCommands = commands.deployLoaderCommands;
+/** Answers one of those commands, saying whether the invocation was one of them. */
 export const maybeRunCli = commands.maybeRunCli;
