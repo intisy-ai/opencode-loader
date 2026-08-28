@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-nocheck
 // Opt-in OpenCode proxy daemon (parity with the claude-code-loader proxy). By
 // DEFAULT OpenCode routes in-process (core-auth loader.fetch -> handle()), so
 // this daemon stays dormant; it is only started when opencode-loader config
@@ -13,6 +12,16 @@ import { homedir } from "os";
 import { startLoaderProxy } from "@intisy-ai/core-loader/dist/proxy-runner.js";
 import { createProxyServer, opencodeProfile, makeDynamicResolver } from "@intisy-ai/opencode-proxy";
 import { emitEvent, setActivityContext } from "@intisy-ai/core";
+import type { ActivitySpec, Impact } from "@intisy-ai/core";
+
+// The proxy engine describes an event more loosely than core records one (its `impact` is any
+// string), and this loader is the seam between the two vocabularies, so it narrows rather than
+// asserting: an impact the recorder does not know is dropped instead of being filed under itself.
+const IMPACTS: Impact[] = ["debug", "info", "notice", "warning", "error"];
+function asActivitySpec(spec: { topic: string; action: string; impact?: string; details?: unknown }): ActivitySpec {
+  const impact = IMPACTS.find((known) => known === spec.impact);
+  return { ...spec, ...(impact ? { impact } : { impact: undefined }) } as ActivitySpec;
+}
 
 const PORT = parseInt(process.env.HUB_PROXY_PORT || "34568", 10);
 const CONFIG_DIR = process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode");
@@ -27,5 +36,5 @@ startLoaderProxy({
   profile: opencodeProfile(),
   configDir: CONFIG_DIR,
   port: PORT,
-  emitActivity: (spec) => emitEvent(spec, "core-proxy"),
+  emitActivity: (spec) => emitEvent(asActivitySpec(spec), "core-proxy"),
 });

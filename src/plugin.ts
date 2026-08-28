@@ -240,8 +240,6 @@ export async function cleanup(configDir?: string) {
 export async function activate() {
   const configDir = getAppConfigDir();
   try {
-    // @ts-expect-error core types the emitter to its spec, core-loader to the bare record it
-    // builds, and this loader is the only component holding both.
     setActivitySeam(createActivitySeam("opencode-loader"));
     emitPluginActivated("opencode-loader");
   } catch (e) {
