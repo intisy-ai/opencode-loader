@@ -2,20 +2,13 @@ import { existsSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
 import { fileURLToPath } from "url";
-// @ts-ignore: generated bundle, no .d.ts
 import { maybeRunCli, deployLoaderCommands } from "./commands.js";
-// @ts-ignore: generated bundle, no .d.ts
 import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "@intisy-ai/core-loader/dist/loader-runtime.js";
-// @ts-ignore: generated bundle, no .d.ts
 import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines, subdirEnvCmdLines, subdirEnvShLines } from "@intisy-ai/core-loader/dist/wrapper.js";
 import { getAppDescriptor, getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli, createActivitySeam } from "@intisy-ai/core";
-// @ts-ignore: generated bundle, no .d.ts
 import { ensureAppCli } from "@intisy-ai/core-loader/dist/ensure-app.js";
-// @ts-ignore: generated bundle, no .d.ts
 import { setActivitySeam, emitPluginActivated } from "@intisy-ai/core-loader/dist/activity-seam.js";
-// @ts-ignore: generated bundle, no .d.ts
 import { ensureProxy } from "./proxy-boot.js";
-// @ts-ignore: generated bundle, no .d.ts
 import { deployFrontDoor } from "@intisy-ai/opencode-proxy";
 
 // Slash-command invocations shell in as `node <this file> <action>`; handle them
@@ -291,7 +284,7 @@ export async function activate() {
   // Opt-in only: no-op unless config use_proxy=true. Runs in the OpenCode process,
   // so the env it sets is visible to core-auth's loader.fetch in the same process.
   try {
-    await ensureProxy(LOADER_CONFIG, (m) => writeLog(configDir, m));
+    await ensureProxy(LOADER_CONFIG, (m: string) => writeLog(configDir, m));
   } catch (e) {
     writeLog(configDir, "Failed to ensure opencode proxy: " + e, true);
   }
