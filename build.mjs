@@ -12,10 +12,10 @@ const banner = {
 };
 
 // tui-extension.ts is loaded in isolation via HUB_TUI_EXTENSION from the repo's
-// dist dir; it imports core-loader's shared account-menu, so it must be bundled
+// dist dir; it imports basekit/loader's shared account-menu, so it must be bundled
 // self-contained too (a plain tsc build leaves an unresolvable
-// ../core-loader/dist import). proxy.ts is the opt-in proxy daemon (run
-// standalone via `node dist/proxy.js`); it imports core-loader's
+// basekit/loader import). proxy.ts is the opt-in proxy daemon (run
+// standalone via `node dist/proxy.js`); it imports basekit/loader's
 // startLoaderProxy + opencode-proxy's routing engine, so it must be bundled
 // to stay a single self-contained file with no runtime cross-submodule
 // dependency. (proxy-boot.ts stays inlined into dist/plugin.js via
@@ -30,7 +30,7 @@ await build({
   logLevel: "info",
   // Shared libraries are materialised once per home by plugin-updater instead of
   // being carried by every plugin that uses them.
-  external: ["@intisy-ai/core", "@intisy-ai/core-auth", "@intisy-ai/core-loader", "@intisy-ai/opencode-proxy"],
+  external: ["@intisy-ai/basekit", "@intisy-ai/basekit/*", "@intisy-ai/opencode-proxy"],
 });
 
 console.log("Bundled loader plugin -> dist/plugin.js, dist/tui-extension.js, dist/proxy.js");

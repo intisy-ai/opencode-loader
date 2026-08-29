@@ -3,11 +3,11 @@ import { join, dirname } from "path";
 import { homedir } from "os";
 import { fileURLToPath } from "url";
 import { maybeRunCli, deployLoaderCommands } from "./commands.js";
-import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "@intisy-ai/core-loader/dist/loader-runtime.js";
-import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines, subdirEnvCmdLines, subdirEnvShLines } from "@intisy-ai/core-loader/dist/wrapper.js";
-import { getAppDescriptor, getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli, createActivitySeam } from "@intisy-ai/core";
-import { ensureAppCli } from "@intisy-ai/core-loader/dist/ensure-app.js";
-import { setActivitySeam, emitPluginActivated } from "@intisy-ai/core-loader/dist/activity-seam.js";
+import { getBinDir, runEarlyLaunchHooks, ensureOnPath } from "@intisy-ai/basekit/loader/loader-runtime.js";
+import { cliDispatchCmdLines, cliDispatchShLines, tuiCandidateResolveShLines, subdirEnvCmdLines, subdirEnvShLines } from "@intisy-ai/basekit/loader/wrapper.js";
+import { getAppDescriptor, getAppConfigDir, makeWriteLog, defineConfig, defineReadme, maybeRunReadmeCli, createActivitySeam } from "@intisy-ai/basekit";
+import { ensureAppCli } from "@intisy-ai/basekit/loader/ensure-app.js";
+import { setActivitySeam, emitPluginActivated } from "@intisy-ai/basekit/loader/activity-seam.js";
 import { ensureProxy } from "./proxy-boot.js";
 import { deployFrontDoor } from "@intisy-ai/opencode-proxy";
 
@@ -35,11 +35,11 @@ defineReadme({
     PLUGIN -->|earlyLaunch| UPDATER[plugin-updater]
     PLUGIN -->|install| OCBIN["oc / oc.cmd in ~/.local/bin"]
     PLUGIN -->|deployCommands| CMDS["/opencode-loader-config, /plugins, /accounts"]
-    OCBIN -->|run oc| TUI["core-loader TUI (node tui.js)"]
+    OCBIN -->|run oc| TUI["basekit loader TUI (node tui.js)"]
     TUI --> PROJ[Projects tab]
     TUI --> PLUG[Plugins tab]
     TUI --> PROV[Providers tab (tui-extension.js)]
-    PROV --> COREAUTH[(core-auth account store)]`,
+    PROV --> COREAUTH[(basekit auth account store)]`,
   structure: {
     src: [
       "`plugin.ts`: the OpenCode plugin entry (`activate`/`cleanup`); installs the `oc` wrapper, runs plugin-updater, deploys commands. Also acts as the command CLI (`node plugin.js <config|plugins|accounts>`).",
@@ -48,7 +48,7 @@ defineReadme({
     ],
     dist: ["compiled output (generated; not committed)."],
   },
-  dependencies: ["core-loader", "core", "plugin-updater", "Bun"],
+  dependencies: ["basekit", "plugin-updater", "Bun"],
   extraSections: [
     {
       id: "requirements",
@@ -112,7 +112,7 @@ defineReadme({
         "| --- | --- |",
         "| `/opencode-loader-config` | View/change loader config (`opencode-loader.json`): `list`, `get <key>`, `set <key> <value>`. 100% of the config is reachable here. |",
         "| `/plugins` | List the loader-managed plugins and their state (from `plugins.json`). |",
-        "| `/accounts` | List signed-in accounts across all providers (from the core-auth store). |",
+        "| `/accounts` | List signed-in accounts across all providers (from the basekit auth store). |",
       ].join("\n"),
     },
     {
@@ -282,7 +282,7 @@ export async function activate() {
   }
 
   // Opt-in only: no-op unless config use_proxy=true. Runs in the OpenCode process,
-  // so the env it sets is visible to core-auth's loader.fetch in the same process.
+  // so the env it sets is visible to basekit/auth's loader.fetch in the same process.
   try {
     await ensureProxy(LOADER_CONFIG, (m: string) => writeLog(configDir, m));
   } catch (e) {

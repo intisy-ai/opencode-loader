@@ -1,12 +1,12 @@
 // Cross-app slash-commands for opencode-loader. The shared engine lives in
-// core-loader (makeLoaderCommands); this only wires the app-specific bits: the
+// basekit/loader (makeLoaderCommands); this only wires the app-specific bits: the
 // opencode command dir, the loader's runtime entry, and the `oc auth login` hint.
 import { join } from "path";
 import { existsSync } from "fs";
 import { homedir } from "os";
-import { runConfigCli, runAllConfigCli, applyManifestDeclarations, appPaths, getAppDescriptor } from "@intisy-ai/core";
+import { runConfigCli, runAllConfigCli, applyManifestDeclarations, appPaths, getAppDescriptor } from "@intisy-ai/basekit";
 import { readDeployedManifests } from "@intisy-ai/api/host";
-import { makeLoaderCommands } from "@intisy-ai/core-loader/dist/loader-commands.js";
+import { makeLoaderCommands } from "@intisy-ai/basekit/loader/loader-commands.js";
 
 function loaderEntry(configDir: string): string {
   const candidates = [

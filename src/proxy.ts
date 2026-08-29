@@ -4,15 +4,15 @@
 // this daemon stays dormant; it is only started when opencode-loader config
 // use_proxy=true (see proxy-boot.ts). The generic daemon scaffolding (config-dir
 // logging, start-marker, dynamic provider resolver, listen) lives in
-// core-loader's startLoaderProxy; this entry only supplies the OpenCode
+// basekit/loader's startLoaderProxy; this entry only supplies the OpenCode
 // specifics: opencodeProfile + createProxyServer/makeDynamicResolver from
 // opencode-proxy and the :34568 default port.
 import { join } from "path";
 import { homedir } from "os";
-import { startLoaderProxy } from "@intisy-ai/core-loader/dist/proxy-runner.js";
+import { startLoaderProxy } from "@intisy-ai/basekit/loader/proxy-runner.js";
 import { createProxyServer, opencodeProfile, makeDynamicResolver } from "@intisy-ai/opencode-proxy";
-import { emitEvent, setActivityContext } from "@intisy-ai/core";
-import type { ActivitySpec, Impact } from "@intisy-ai/core";
+import { emitEvent, setActivityContext } from "@intisy-ai/basekit";
+import type { ActivitySpec, Impact } from "@intisy-ai/basekit";
 
 // The proxy engine describes an event more loosely than core records one (its `impact` is any
 // string), and this loader is the seam between the two vocabularies, so it narrows rather than
@@ -27,7 +27,7 @@ const PORT = parseInt(process.env.HUB_PROXY_PORT || "34568", 10);
 const CONFIG_DIR = process.env.HUB_CONFIG_DIR || join(homedir(), ".config", "opencode");
 
 // This process is the proxy daemon and nothing else, so naming the entry once is
-// accurate for every event it emits, including core-proxy's per-request ones.
+// accurate for every event it emits, including basekit/proxy's per-request ones.
 setActivityContext({ entry: "proxy" });
 
 startLoaderProxy({

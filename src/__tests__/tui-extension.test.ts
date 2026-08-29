@@ -23,7 +23,7 @@ afterEach(() => {
 
 // A provider asks its context for this and never imports core-auth, so a loader that stopped
 // registering it would leave every provider unable to provide the capability it declared.
-test("the extension offers core-auth's provider helpers as a host service", async () => {
+test("the extension offers basekit/auth's provider helpers as a host service", async () => {
   const registered = {};
   const tuiApi = {
     registerTab: () => {},

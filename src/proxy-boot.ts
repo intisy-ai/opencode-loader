@@ -1,5 +1,5 @@
 // Opt-in proxy activation. When opencode-loader config use_proxy=true, activate()
-// (which runs INSIDE the OpenCode process, the same process where core-auth's
+// (which runs INSIDE the OpenCode process, the same process where basekit/auth's
 // loader.fetch later runs) marks the env so that fetch forwards to a local
 // opencode-proxy daemon, and ensures that daemon is running. When use_proxy is
 // false (the DEFAULT) this is a pure no-op and OpenCode keeps routing in-process.
@@ -70,7 +70,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
-// Turns on same-process proxy routing: core-auth's loader.fetch (same process)
+// Turns on same-process proxy routing: basekit/auth's loader.fetch (same process)
 // reads these per request, so setting them makes it forward to the daemon. Only
 // called once a daemon is actually listening or has just been spawned, never
 // while there is nothing behind the port (that would break every request).

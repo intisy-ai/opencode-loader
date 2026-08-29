@@ -1,13 +1,13 @@
 // Loader-owned "Providers" tab (HUB_TUI_EXTENSION). Generic + thin: discovers
 // providers from each plugin's package.json claudeHub declaration, and on Enter
 // opens that provider's account/quota menu in-tab. The menu rendering + all its
-// navigation live in core-loader's shared account-menu (also used by the Claude
+// navigation live in basekit/loader's shared account-menu (also used by the Claude
 // loader); the menu MODEL lives in core-auth. This file only lists providers.
 import { pathToFileURL } from "url";
-import type { AccountMenuApi } from "@intisy-ai/core-loader/dist/account-menu.js";
-import type { CustomProviderEngine, CustomEndpointDraft } from "@intisy-ai/core-loader/dist/custom-provider.js";
-import type { CustomTabContext, CustomTabRenderContext, CustomTabUi } from "@intisy-ai/core-loader/dist/custom-tab.js";
-import type { TuiApi } from "@intisy-ai/core-loader/dist/tui.js";
+import type { AccountMenuApi } from "@intisy-ai/basekit/loader/account-menu.js";
+import type { CustomProviderEngine, CustomEndpointDraft } from "@intisy-ai/basekit/loader/custom-provider.js";
+import type { CustomTabContext, CustomTabRenderContext, CustomTabUi } from "@intisy-ai/basekit/loader/custom-tab.js";
+import type { TuiApi } from "@intisy-ai/basekit/loader/tui.js";
 
 /** The endpoint API a deployed custom-provider plugin exposes, loaded from its own handler. */
 interface EndpointsApi {
@@ -20,14 +20,14 @@ interface EndpointsApi {
 }
 import { join } from "path";
 import { homedir } from "os";
-import { createAccountMenu } from "@intisy-ai/core-loader/dist/account-menu.js";
-import { providerRows } from "@intisy-ai/core-loader/dist/provider-catalog.js";
-import { loaderConfigDir, loaderReposDir } from "@intisy-ai/core-loader/dist/app-home.js";
-import { extraProviderRows } from "@intisy-ai/core-loader/dist/provider-rows.js";
-import { getUpdater, setupPlugin } from "@intisy-ai/core-loader/dist/updater.js";
-import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema } from "@intisy-ai/core";
-import type { ActivityQuery } from "@intisy-ai/core";
-import { PROVIDER_SUPPORT, providerSupport } from "@intisy-ai/core-auth";
+import { createAccountMenu } from "@intisy-ai/basekit/loader/account-menu.js";
+import { providerRows } from "@intisy-ai/basekit/loader/provider-catalog.js";
+import { loaderConfigDir, loaderReposDir } from "@intisy-ai/basekit/loader/app-home.js";
+import { extraProviderRows } from "@intisy-ai/basekit/loader/provider-rows.js";
+import { getUpdater, setupPlugin } from "@intisy-ai/basekit/loader/updater.js";
+import { readActivity, createActivitySeam, setActivityContext, globalSettingsSchema } from "@intisy-ai/basekit";
+import type { ActivityQuery } from "@intisy-ai/basekit";
+import { PROVIDER_SUPPORT, providerSupport } from "@intisy-ai/basekit/auth";
 import * as caps from "./opencode-caps.js";
 
 const APP_HOME = join(homedir(), ".config", "opencode");
@@ -130,7 +130,7 @@ export default function (tuiApi: TuiApi): void {
     tuiApi.registerCapabilities({
       mcpServers: caps.mcpServers,
       addMcpServer: caps.addMcpServer,
-      // Behaviour a plugin may not link for itself: core-auth's provider helpers, which core-loader
+      // Behaviour a plugin may not link for itself: basekit/auth's provider helpers, which core-loader
       // may not link either, being in the same layer. Linked once here rather than copied into every
       // provider bundle.
       services: [{ id: PROVIDER_SUPPORT, implementation: providerSupport() }],

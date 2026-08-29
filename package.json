@@ -19,12 +19,6 @@
   "files": [
     "dist/",
     "icon.svg",
-    "core-loader/dist/",
-    "core-loader/api/dist/",
-    "core-loader/api/package.json",
-    "core/dist/",
-    "opencode-proxy/dist/",
-    "opencode-proxy/core-proxy/dist/",
     "README.md",
     "LICENSE"
   ],
@@ -48,9 +42,7 @@
   },
   "dependencies": {
     "@intisy-ai/api": "^1.0.2",
-    "@intisy-ai/core": "^2.6.0",
-    "@intisy-ai/core-auth": "^2.0.0",
-    "@intisy-ai/core-loader": "^3.5.0",
+    "@intisy-ai/basekit": "^4.0.0",
     "@intisy-ai/opencode-proxy": "^2.0.0"
   }
 }

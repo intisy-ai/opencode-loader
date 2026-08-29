@@ -1,5 +1,5 @@
-// opencode adapter for core-loader's app-capability contract (see
-// libs/core-loader "S.capabilities" / tuiApi.registerCapabilities). opencode
+// opencode adapter for basekit/loader's app-capability contract (see
+// basekit's loader module ("S.capabilities" / tuiApi.registerCapabilities). opencode
 // registers ONLY the MCP subset here: it has its own in-app session UI and no
 // plugin marketplace, so listSessions/foreignPlugins/marketplaces/addMarketplace
 // are intentionally never registered for this loader.
@@ -19,11 +19,11 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
-import { loaderConfigDir } from "@intisy-ai/core-loader/dist/app-home.js";
+import { loaderConfigDir } from "@intisy-ai/basekit/loader/app-home.js";
 import { readDeployedManifests } from "@intisy-ai/api/host";
-import { homePaths } from "@intisy-ai/core-loader/dist/home-paths.js";
-import type { HomePaths } from "@intisy-ai/core-loader/dist/home-paths.js";
-import type { CapabilityMcpServer, CapabilityResult, McpServerDraft } from "@intisy-ai/core-loader/dist/app-capabilities.js";
+import { homePaths } from "@intisy-ai/basekit/loader/home-paths.js";
+import type { HomePaths } from "@intisy-ai/basekit/loader/home-paths.js";
+import type { CapabilityMcpServer, CapabilityResult, McpServerDraft } from "@intisy-ai/basekit/loader/app-capabilities.js";
 
 /** One MCP server as this app's own config declares it, in either of the two shapes it supports. */
 interface OpencodeMcpEntry {
